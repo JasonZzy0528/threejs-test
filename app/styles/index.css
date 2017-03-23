@@ -1,0 +1,8 @@
+body {
+  margin: 0;
+  overflow: hidden; }
+  body #viewport3d {
+    width: 100vw;
+    height: 100vh; }
+
+/*# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImluZGV4LnNjc3MiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUE7RUFDRSxVQUFTO0VBQ1QsaUJBQWdCLEVBS2pCO0VBUEQ7SUFJSSxhQUFZO0lBQ1osY0FBYSxFQUNkIiwiZmlsZSI6ImluZGV4LmNzcyIsInNvdXJjZXNDb250ZW50IjpbImJvZHkge1xuICBtYXJnaW46IDA7XG4gIG92ZXJmbG93OiBoaWRkZW47XG4gICN2aWV3cG9ydDNke1xuICAgIHdpZHRoOiAxMDB2dztcbiAgICBoZWlnaHQ6IDEwMHZoO1xuICB9XG59XG4iXX0= */

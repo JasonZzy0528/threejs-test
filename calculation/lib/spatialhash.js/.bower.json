@@ -1,0 +1,51 @@
+{
+  "name": "spatialhash",
+  "version": "0.1.4",
+  "description": "Fast spatial indexing and search for three.js",
+  "authors": [
+    "Davis Marques <dmarques@unimelb.edu.au>"
+  ],
+  "license": "MIT",
+  "main": "dist/spatialhash.js",
+  "ignore": [
+    ".bowerrc",
+    ".editorconfig",
+    ".gitattributes",
+    ".gitignore",
+    ".istanbul.yml",
+    ".jshintrc",
+    "gruntfile.js",
+    "package.json",
+    "conf",
+    "demo",
+    "node_modules",
+    "src",
+    "test",
+    "vendor"
+  ],
+  "devDependencies": {
+    "immutable": "^3.7.6",
+    "three.js": "threejs#*"
+  },
+  "keywords": [
+    "threejs",
+    "3D",
+    "search",
+    "spatial",
+    "hash",
+    "index"
+  ],
+  "dependencies": {
+    "parallel.js": "paralleljs#*"
+  },
+  "homepage": "https://github.com/elmarquez/spatialhash.js",
+  "_release": "0.1.4",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.1.4",
+    "commit": "9c0872826e93441d50fdc7f008427432c875c7f7"
+  },
+  "_source": "https://github.com/elmarquez/spatialhash.js.git",
+  "_target": "*",
+  "_originalSource": "spatialhash.js"
+}

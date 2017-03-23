@@ -1,0 +1,13 @@
+{
+  "name": "parallel.js",
+  "homepage": "https://github.com/adambom/parallel.js",
+  "_release": "0538fa18f6",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "0538fa18f685bf905e4e7adbb7b408758d65c484"
+  },
+  "_source": "https://github.com/adambom/parallel.js.git",
+  "_target": "*",
+  "_originalSource": "paralleljs"
+}

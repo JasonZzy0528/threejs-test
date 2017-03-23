@@ -1,0 +1,44 @@
+{
+  "name": "Hamsters.js",
+  "version": "3.9.9",
+  "authors": [
+    "Austin K Smith <austin@asmithdev.com>"
+  ],
+  "description": "100% Vanilla Javascript Multithreading & Parallel Execution Library",
+  "main": "src/es5/hamsters.js",
+  "moduleType": [
+    "es5"
+  ],
+  "keywords": [
+    "multithreading",
+    "concurrency",
+    "performance",
+    "parallelism",
+    "compute",
+    "workers",
+    "threads",
+    "threading",
+    "web workers",
+    "mpi",
+    "parallel",
+    "promises"
+  ],
+  "license": "Artistic License 2.0",
+  "homepage": "http://hamsters.io",
+  "ignore": [
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "**/.*"
+  ],
+  "_release": "3.9.9",
+  "_resolution": {
+    "type": "version",
+    "tag": "v3.9.9",
+    "commit": "818908bb83f0f971cf3ff886f49529a9e617d7fa"
+  },
+  "_source": "https://github.com/austinksmith/WebHamsters.git",
+  "_target": "^3.8.0",
+  "_originalSource": "WebHamsters"
+}

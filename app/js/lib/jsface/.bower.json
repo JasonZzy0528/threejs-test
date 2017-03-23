@@ -1,0 +1,27 @@
+{
+  "name": "jsface",
+  "version": "2.4.11",
+  "main": "jsface.js",
+  "ignore": [
+    ".gitignore",
+    ".travis.yml",
+    "CHANGELOG.txt",
+    "package.json",
+    "README.md",
+    "gulpfile.js",
+    "dist",
+    "samples",
+    "test"
+  ],
+  "homepage": "https://github.com/tnhu/jsface",
+  "_release": "2.4.11",
+  "_resolution": {
+    "type": "version",
+    "tag": "2.4.11",
+    "commit": "ce1047a666b5ca589befd0f11fd37b2624dddb6c"
+  },
+  "_source": "https://github.com/tnhu/jsface.git",
+  "_target": "^2.4.11",
+  "_originalSource": "jsface",
+  "_direct": true
+}

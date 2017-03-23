@@ -1,0 +1,21 @@
+{
+  "name": "threejs-test",
+  "description": "",
+  "main": "index.js",
+  "authors": [
+    "Zeyu Zhao <kowhai2010@live.cn>"
+  ],
+  "license": "ISC",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "four": "^0.1.58",
+    "jsface": "^2.4.11"
+  }
+}

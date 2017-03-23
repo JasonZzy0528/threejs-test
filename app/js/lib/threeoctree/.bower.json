@@ -1,0 +1,13 @@
+{
+  "name": "threeoctree",
+  "homepage": "https://github.com/collinhover/threeoctree",
+  "_release": "bbe0e98f0f",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "bbe0e98f0fffdc51bd2ecd333cf0815659cc625e"
+  },
+  "_source": "https://github.com/collinhover/threeoctree.git",
+  "_target": "*",
+  "_originalSource": "https://github.com/collinhover/threeoctree.git"
+}
