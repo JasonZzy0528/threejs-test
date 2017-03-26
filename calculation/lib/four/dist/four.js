@@ -6,7 +6,7 @@ var Promise = require('../../bluebird/js/browser/bluebird');
 var TWEEN = require('../../tween.js/src/Tween');
 
 var FOUR = FOUR || {};
-var gl = require("gl")(10,10);
+var gl = require("gl")();
 
 /**
  * Cursor styles.
