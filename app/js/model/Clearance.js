@@ -83,7 +83,6 @@ define(
         me.bottomPoints = catenaryObjArray[bottom].getBottomBound();
         me.rightBottomPoints = catenaryObjArray[rightBottom].getBottomBound();
         me.leftBottomPoints = catenaryObjArray[leftBottom].getBottomBound();
-
         var clearanceGeometry = new THREE.Geometry();
         var clearanceVertices = [];
 
@@ -124,9 +123,6 @@ define(
             clearanceGeometry.faces.push(new THREE.Face3(3, beginIndex + 4, beginIndex + 5));
             clearanceGeometry.faces.push(new THREE.Face3(3, beginIndex + 5, 0));
             clearanceGeometry.faces.push(new THREE.Face3(0, beginIndex + 5, beginIndex));
-          }else if(i == 16){
-            var beginIndex = 5*4 + 11*6;
-
           }else if(i < 16 && i > 5){
             var beginIndex = 5*4 + (i-5)*6;
             clearanceGeometry.faces.push(new THREE.Face3(beginIndex - 6, beginIndex, beginIndex + 1));
@@ -143,7 +139,6 @@ define(
             clearanceGeometry.faces.push(new THREE.Face3(beginIndex - 1, beginIndex, beginIndex - 6));
           }
         }
-
         clearanceGeometry.computeFaceNormals();
         clearanceGeometry.computeVertexNormals();
 
@@ -175,7 +170,6 @@ define(
           var bottomRight = new THREE.Vector3(me.rightPoints[index].x + (H - S - me.rightBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.x , me.rightPoints[index].y + (H - S - me.rightBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.y , me.rightBottomPoints[index].z);
 
           var bottomLeft = new THREE.Vector3(me.leftPoints[index].x - (H - S - me.leftBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.x , me.leftPoints[index].y - (H - S - me.leftBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.y , me.leftBottomPoints[index].z);
-
 
           var middleLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, Math.sqrt(2) * 3 + H - S);
 
