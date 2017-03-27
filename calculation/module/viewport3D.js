@@ -38,7 +38,6 @@ const Viewport3D = Class([FOUR.Viewport3D], {
 
     me.render();
 
-    //
     me.createCenterSpan();
     me.createCatenaries();
     me.generateClearance();
@@ -97,26 +96,13 @@ const Viewport3D = Class([FOUR.Viewport3D], {
       groundZ: groundZ,
       viewport3d: me
     }
-    //
     var clearance = new Clearance(config).init();
     me.clearanceObj = clearance;
     me.scene.model.add(clearance.get3dObject());
   },
 
-  generateIntersection: function(point){
-    var me = this;
-    var intersectGeometry = new THREE.Geometry();
-    var clearance = me.clearanceObj;
-    var points = clearance.getIntersectsWithVeg(point);
-    me.intersectObjArray = points;
-  },
-
   getClearance: function(){
     return this.clearanceObj;
-  },
-
-  getIntersects: function(){
-    return this.intersectObjArray;
   },
 
   setupCamera: function(){

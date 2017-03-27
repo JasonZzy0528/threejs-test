@@ -31,10 +31,10 @@
 
 
     const centerSpan = [[20,0,15], [-20, 0, 15]];
-    const line2 = [[20,2,13], [0,2,8], [-20, 2, 13]]; //right bottom
-    const line3 = [[20,2,15], [0,2,10], [-20, 2, 15]]; //right
-    const line4 = [[20,-2,13], [0,-2,8], [-20, -2, 13]]; // left bottom
-    const line5 = [[20,-2,15], [0,-2,10], [-20, -2, 15]]; //left
+    const line2 = [[21,2,13], [0,2,8], [-20, 2, 13]]; //right bottom
+    const line3 = [[20,2,15], [0,2,10], [-24, 2, 15]]; //right
+    const line4 = [[22,-2,13], [0,-2,8], [-20, -2, 13]]; // left bottom
+    const line5 = [[20,-2,15], [0,-2,10], [-23, -2, 15]]; //left
 
     const catenaries = [];
     // catenaries.push(line1);
@@ -76,6 +76,6 @@
     };
     var viewport3d = new Viewport3D(config);
 
-    viewport3d.generateIntersection(new THREE.Vector3(20, 0, 0))
+    viewport3d.generateIntersection(new THREE.Vector3(0, 0, 0))
   });
 })();

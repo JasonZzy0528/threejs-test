@@ -1,7 +1,20 @@
-var express = require('express');
-var router = express.Router();
-var db = require('./db/db')
+var db = require('./db/db');
+var _ = require('lodash');
+var args = process.argv;
 
-router.post('/createClearance', db.createClearance);
+var poles, catenaries, point;
 
-module.exports = router;
+try {
+  poles = JSON.parse(args[2]);
+  catenaries = JSON.parse(args[3]);
+  point = JSON.parse(args[4]);
+} catch(err){
+  throw err;
+}
+
+db.createClearance(poles, catenaries, point).then(function(data){
+  console.log(data.getIntersectsWithVeg(point));
+})
+.catch(function(err){
+  throw err;
+});

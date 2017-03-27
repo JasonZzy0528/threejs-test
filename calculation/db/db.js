@@ -20,24 +20,17 @@ function getPoles(params){
       }
     })
     .catch(function(error){
-      reject(error);
+      reject({
+        status: 'error',
+        message: JSON.stringify(error)
+      });
     });
   });
 }
 
 function getCatenaries(params){
   return new Promise(function(resolve, reject){
-    var sqlStr = 'SELECT *, st_asgeojson(geom) as geom FROM catenaries_102086955959513 WHERE';
-    _.forEach(params, function(catenary, index){
-      if(index != 0){
-        sqlStr += ' OR (polestart=' +  catenary.polestart + ' AND poleend=' +  catenary.poleend + ')';
-      }else{
-        sqlStr += ' (polestart=' +  catenary.polestart + ' AND poleend=' +  catenary.poleend + ')';
-      }
-    });
-    // close sql
-    sqlStr += ';';
-    db.query(sqlStr).then(function(data){
+    db.query('SELECT *, st_asgeojson(geom) as geom FROM catenaries_102086955959513 WHERE (polestart=$1 AND poleend=$2) OR (polestart=$2 AND poleend=$1)', params).then(function(data){
       if(data.length > 0){
         var catenaries = [];
         _.forEach(data, function(catenary){
@@ -47,12 +40,18 @@ function getCatenaries(params){
         });
         resolve(catenaries);
       }else{
-        reject({error:'Missing catenaries'});
+        reject({
+          status: 'error',
+          message: 'Missing catenaries'
+        });
       }
       resolve(data);
     })
     .catch(function(error){
-      reject(error);
+      reject({
+        status: 'error',
+        message: JSON.stringify(error)
+      });
     });
   });
 }
@@ -68,12 +67,12 @@ function getGroudInfo(params){
   });
 }
 
+
 function generateClearance(centerSpan, catenaries){
   return new Promise(function(resolve, reject){
     var voltage = 132;
     var spanMetres = 110;
     var towerHeight = centerSpan[0][2];
-    // var towerHeight = 15;
     var clearanceConfig = {
       towerHeight: towerHeight
     };
@@ -130,77 +129,58 @@ function generateClearance(centerSpan, catenaries){
   })
 }
 
-function createClearance(req, res, next){
-  var centerSpan = [];
-  var catenaries = [];
-  var promises =[];
+function cleanCatenaries(catenaries){
+  var sortedCatenaries = [];
+  _.forEach(catenaries, function(catenary){
+    if(catenary[0][0] > catenary[2][0]){
+      var tmpCatenary = [catenary[2], catenary[1], catenary[0]];
+      sortedCatenaries.push(tmpCatenary);
+    }else{
+      sortedCatenaries.push(catenary);
+    }
+  });
+  return sortedCatenaries;
+}
 
-
-  // // local run
-  // const centerSpan = [[20,0,15], [-20, 0, 15]];
-  // const line2 = [[20,2,13], [0,2,8], [-20, 2, 13]]; //right bottom
-  // const line3 = [[20,2,15], [0,2,10], [-20, 2, 15]]; //right
-  // const line4 = [[20,-2,13], [0,-2,8], [-20, -2, 13]]; // left bottom
-  // const line5 = [[20,-2,15], [0,-2,10], [-20, -2, 15]]; //left
-  //
-  // const catenaries = [];
-  // catenaries.push(line2);
-  // catenaries.push(line3);
-  // catenaries.push(line4);
-  // catenaries.push(line5);
-  //
-  // generateClearance(centerSpan, catenaries).then(function(data){
-  //   var vertices = [];
-  //   _.forEach(data.object.geometry.vertices, function(vertice){
-  //     vertices.push([vertice.x, vertice.y, vertice.z])
-  //   });
-  //   res.status(200).json({
-  //     status:200,
-  //     data: vertices
-  //   });
-  // })
-  // .catch(function(error){
-  //   res.status(500).json({
-  //     status:500,
-  //     message: error
-  //   })
-  // });
-
-  if(req.body.hasOwnProperty('poles_gid') || req.body.hasOwnProperty('catenaries')){
-    var poles_gid = JSON.parse(req.body.poles_gid);
-    var catenaries_info = JSON.parse(req.body.catenaries);
-
-    // query poles and catenaries
-    promises.push(getPoles(poles_gid));
-    promises.push(getCatenaries(catenaries_info));
-
-    Promise.all(promises).then(function(data){
-      var centerSpan = data[0];
-      var catenaries = data[1];
-      generateClearance(centerSpan,catenaries).then(function(data){
-        var vertices = [];
-        _.forEach(data.object.geometry.vertices, function(vertice){
-          vertices.push([vertice.x, vertice.y, vertice.z])
-        });
-        res.status(200).json({
-          status:200,
-          data: vertices
-        });
-      });
-    })
-    .catch(function(err){
-      res.status(500).json({
-        status:500,
-        message: err
-      });
-    });
-
+function cleanCenterSpan(centerSpan){
+  var tmpCenterSpan = [];
+  if(centerSpan[0][0] > centerSpan[1][0]){
+    tmpCenterSpan = [centerSpan[1], centerSpan[0]];
   }else{
-    res.status(400).json({
-      status:400,
-      message: 'Missing params'
-    });
+    tmpCenterSpan = centerSpan;
   }
+  return tmpCenterSpan;
+}
+
+function createClearance(poleIds, catenaryIds, point){
+  var promises =[];
+  return new Promise(function(resolve, reject){
+    if(poleIds.length == 2 || catenaryIds.length == 2){
+      // query poles and catenaries
+      promises.push(getPoles(poleIds));
+      promises.push(getCatenaries(catenaryIds));
+
+      Promise.all(promises).then(function(data){
+        var centerSpan = cleanCenterSpan(data[0]);
+        var catenaries = cleanCatenaries(data[1]);
+        generateClearance(centerSpan,catenaries, point).then(function(data){
+          resolve(data);
+        });
+      })
+      .catch(function(err){
+        reject({
+          status: 'error',
+          message: JSON.stringify(err)
+        })
+      });
+
+    }else{
+      reject({
+        status: 'error',
+        message: 'Incorrect poles or catenaries input'
+      })
+    }
+  });
 }
 
 module.exports = {

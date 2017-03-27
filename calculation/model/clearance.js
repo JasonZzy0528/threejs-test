@@ -5,7 +5,9 @@ Class = jsface.Class;
 var Clearance = Class([], {
   constructor: function(config){
     var me = this;
-    me.material = new THREE.MeshBasicMaterial({side: THREE.DoubleSide});
+    me.material = new THREE.MeshBasicMaterial({
+      side: THREE.DoubleSide
+    });
     _.extend(me, config);
   },
 
@@ -15,8 +17,8 @@ var Clearance = Class([], {
 
     var beginVerticeOnCenterCatenary = me.centerSpan.getBegin();
     var left, right, bottom, rightBottom, leftBottom;
-    var catenaryObjArray = me.catenaryObjArray;
 
+    var catenaryObjArray = me.catenaryObjArray;
     _.forEach(catenaryObjArray, function(catenary, index){
       //check angle between one catenary begin point to centerCatenary end point and centerCatenary vertical normal
       var angle = catenary.getAngleToCatenary(me.centerSpan.getUnitVerticalNormal(),beginVerticeOnCenterCatenary, 0);
@@ -115,9 +117,6 @@ var Clearance = Class([], {
         clearanceGeometry.faces.push(new THREE.Face3(3, beginIndex + 4, beginIndex + 5));
         clearanceGeometry.faces.push(new THREE.Face3(3, beginIndex + 5, 0));
         clearanceGeometry.faces.push(new THREE.Face3(0, beginIndex + 5, beginIndex));
-      }else if(i == 16){
-        var beginIndex = 5*4 + 11*6;
-
       }else if(i < 16 && i > 5){
         var beginIndex = 5*4 + (i-5)*6;
         clearanceGeometry.faces.push(new THREE.Face3(beginIndex - 6, beginIndex, beginIndex + 1));
@@ -167,7 +166,6 @@ var Clearance = Class([], {
 
       var bottomLeft = new THREE.Vector3(me.leftPoints[index].x - (H - S - me.leftBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.x , me.leftPoints[index].y - (H - S - me.leftBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.y , me.leftBottomPoints[index].z);
 
-
       var middleLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, Math.sqrt(2) * 3 + H - S + groundZ);
 
       return [topLeft, topRight, middleRight, bottomRight, bottomLeft, middleLeft];
@@ -206,6 +204,7 @@ var Clearance = Class([], {
   },
 
   getIntersectsWithVeg: function(point){
+    point = new THREE.Vector3(point[0], point[1], point[2]);
     var raycaster = this.generateRayFromCenterCatenaryToPoint(point);
     var object = this.object;
     var intersects = raycaster.intersectObject(object, true);
