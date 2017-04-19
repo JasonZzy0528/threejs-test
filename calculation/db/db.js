@@ -44,6 +44,7 @@ function genClearance(projectId, circuitId) {
       }
     });
   }).then(function(data){
+    var promises = [];
     // generate clearance for each center span
     _.forEach(Object.keys(data), function(attribute){
       // generate center span
@@ -117,7 +118,6 @@ function genClearance(projectId, circuitId) {
       var viewport3d = new Viewport3D(config);
       var clearance = viewport3d.getClearance();
       var lines = data[attribute].lines;
-      var promises = [];
       _.forEach(lines, function(line){
         var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
         if(intersects.length === 1){
