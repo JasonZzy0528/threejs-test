@@ -61,6 +61,15 @@ var CenterSpan = Class([], {
     return normal;
   },
 
+  getIndexedPoint(index){
+    var me = this;
+    var x_gap = (me.end.x - me.begin.x)/20;
+    var y_gap = (me.end.y - me.begin.y)/20;
+    var z_gap = (me.end.z - me.begin.z)/20;
+    var point = new THREE.Vector3(me.begin.x + x_gap*index, me.begin.y + y_gap*index, me.begin.z + z_gap*index);
+    return point;
+  },
+
   getUnitVerticalNormal: function(){
     var me = this;
     var normal = me.getNormal();

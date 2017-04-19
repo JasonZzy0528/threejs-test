@@ -19,58 +19,66 @@ var Clearance = Class([], {
     var left, right, bottom, rightBottom, leftBottom;
 
     var catenaryObjArray = me.catenaryObjArray;
-    _.forEach(catenaryObjArray, function(catenary, index){
-      //check angle between one catenary begin point to centerCatenary end point and centerCatenary vertical normal
-      var angle = catenary.getAngleToCatenary(me.centerSpan.getUnitVerticalNormal(),beginVerticeOnCenterCatenary, 0);
-      // left catenary
-      if(angle <= .5*Math.PI && angle > 0){
-        if(!left){
-          left = index;
-        }else{
-          var leftAngle = catenary.getAngleToCatenary(catenaryObjArray[left].getUnitVerticalNormal(),catenaryObjArray[left].getBegin(), 0);
-          if(leftAngle <= .5*Math.PI && leftAngle > 0){
+    if(catenaryObjArray.length == 1){
+      rightBottom = 0;
+      leftBottom = 0;
+      bottom = 0;
+      left = 0;
+      right = 0;
+    }else{
+      _.forEach(catenaryObjArray, function(catenary, index){
+        //check angle between one catenary begin point to centerCatenary end point and centerCatenary vertical normal
+        var angle = catenary.getAngleToCatenary(me.centerSpan.getUnitVerticalNormal(),beginVerticeOnCenterCatenary, 0);
+        // left catenary
+        if(angle <= .5*Math.PI && angle > 0){
+          if(left == undefined){
             left = index;
+          }else{
+            var leftAngle = catenary.getAngleToCatenary(catenaryObjArray[left].getUnitVerticalNormal(),catenaryObjArray[left].getBegin(), 0);
+            if(leftAngle <= .5*Math.PI && leftAngle > 0){
+              left = index;
+            }
           }
-        }
-        var z = catenary.getBegin().z;
-        if(!leftBottom && z < beginVerticeOnCenterCatenary.z){
-          leftBottom = index
-        }else if(leftBottom && z < beginVerticeOnCenterCatenary.z){
-          if(z < catenaryObjArray[leftBottom].getBegin().z){
+          var z = catenary.getBegin().z;
+          if(leftBottom == undefined){
             leftBottom = index
+          }else if(leftBottom){
+            if(z < catenaryObjArray[leftBottom].getBegin().z){
+              leftBottom = index
+            }
           }
-        }
-      }else if(angle > .5*Math.PI && angle < Math.PI){
-        //right catenary
-        if(!right){
-          right = index;
-        }else{
-          var rightAngle = catenary.getAngleToCatenary(catenaryObjArray[right].getUnitVerticalNormal(),catenaryObjArray[right].getBegin(), 0);
-          if(rightAngle > .5*Math.PI && rightAngle < Math.PI){
+        }else if(angle > .5*Math.PI && angle < Math.PI){
+          //right catenary
+          if(right == undefined){
             right = index;
+          }else{
+            var rightAngle = catenary.getAngleToCatenary(catenaryObjArray[right].getUnitVerticalNormal(),catenaryObjArray[right].getBegin(), 0);
+            if(rightAngle > .5*Math.PI && rightAngle < Math.PI){
+              right = index;
+            }
           }
-        }
 
-        var z = catenary.getBegin().z;
-        if(!rightBottom && z < beginVerticeOnCenterCatenary.z){
-          rightBottom = index
-        }else if(rightBottom && z < beginVerticeOnCenterCatenary.z){
-          if(z < catenaryObjArray[rightBottom].getBegin().z){
+          var z = catenary.getBegin().z;
+          if(rightBottom == undefined){
             rightBottom = index
+          }else if(rightBottom){
+            if(z < catenaryObjArray[rightBottom].getBegin().z){
+              rightBottom = index
+            }
           }
         }
-      }
 
-      // bottom catenary
-      var z = catenary.getBegin().z;
-      if(!bottom && z < beginVerticeOnCenterCatenary.z){
-        bottom = index
-      }else if(bottom && z < beginVerticeOnCenterCatenary.z){
-        if(z < catenaryObjArray[bottom].getBegin().z){
+        // bottom catenary
+        var z = catenary.getBegin().z;
+        if(!bottom){
           bottom = index
+        }else if(bottom){
+          if(z < catenaryObjArray[bottom].getBegin().z){
+            bottom = index
+          }
         }
-      }
-    });
+      });
+    }
 
     me.rightPoints = catenaryObjArray[right].getRightBound();
     me.leftPoints = catenaryObjArray[left].getLeftBound();
@@ -145,10 +153,11 @@ var Clearance = Class([], {
   getSpanVertices: function(index){
     var me = this;
     var towerHeight = me.towerHeight;
-    var groundZ = me.groundZ;
+    var begin_groundZ = me.begin_groundZ;
+    var groundZ_gap = me.groundZ_gap;
     if(index < 5 || index > 15){
-      var topLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, 5 + towerHeight);
-      var topRight = new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, 5 + towerHeight);
+      var topLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, 5 + towerHeight + begin_groundZ + groundZ_gap*index);
+      var topRight = new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, 5 + towerHeight + begin_groundZ + groundZ_gap*index);
       var bottomRight = new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, me.bottomPoints[index].z);
       var bottomLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, me.bottomPoints[index].z);
       return [topLeft, topRight, bottomRight, bottomLeft];
@@ -157,16 +166,42 @@ var Clearance = Class([], {
       var S = me.S;
       var V = me.V;
       var unitDir = me.unitDir;
-      var topLeft =  new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, 5 + towerHeight);
-      var topRight =  new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, 5 + towerHeight);
+      var centerSpanIndexedPoint = me.centerSpan.getIndexedPoint(index);
+      var rightDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - me.rightPoints[index].x, 2) + Math.pow(centerSpanIndexedPoint.y - me.rightPoints[index].y, 2));
+      var leftDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - me.leftPoints[index].x, 2) + Math.pow(centerSpanIndexedPoint.y - me.leftPoints[index].y, 2));
 
-      var middleRight = new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, Math.sqrt(2) * 3 + H - S + groundZ);
+      var topLeft =  new THREE.Vector3(
+        me.leftPoints[index].x,
+        me.leftPoints[index].y,
+        5 + towerHeight + begin_groundZ + groundZ_gap*index);
+      var topRight =  new THREE.Vector3(
+        me.rightPoints[index].x,
+        me.rightPoints[index].y,
+        5 + towerHeight + begin_groundZ + groundZ_gap*index);
 
-      var bottomRight = new THREE.Vector3(me.rightPoints[index].x + (H - S - me.rightBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.x , me.rightPoints[index].y + (H - S - me.rightBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.y , me.rightBottomPoints[index].z);
+      var middleRight = new THREE.Vector3(
+        me.rightPoints[index].x,
+        me.rightPoints[index].y,
+        Math.sqrt(2) * 3 + rightDistance - S + begin_groundZ + groundZ_gap*index
+      );
 
-      var bottomLeft = new THREE.Vector3(me.leftPoints[index].x - (H - S - me.leftBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.x , me.leftPoints[index].y - (H - S - me.leftBottomPoints[index].z + 3*Math.sqrt(2))*unitDir.y , me.leftBottomPoints[index].z);
+      var bottomRight = new THREE.Vector3(
+        me.rightPoints[index].x + (rightDistance - S - (me.rightBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
+        me.rightPoints[index].y + (rightDistance - S - (me.rightBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
+        me.rightBottomPoints[index].z
+      );
 
-      var middleLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, Math.sqrt(2) * 3 + H - S + groundZ);
+      var bottomLeft = new THREE.Vector3(
+        me.leftPoints[index].x - (leftDistance - S - (me.leftBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x ,
+        me.leftPoints[index].y - (leftDistance - S - (me.leftBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y ,
+        me.leftBottomPoints[index].z
+      );
+
+      var middleLeft = new THREE.Vector3(
+        me.leftPoints[index].x,
+        me.leftPoints[index].y,
+        Math.sqrt(2) * 3 + leftDistance - S + begin_groundZ + groundZ_gap*index
+      );
 
       return [topLeft, topRight, middleRight, bottomRight, bottomLeft, middleLeft];
     }
@@ -176,36 +211,12 @@ var Clearance = Class([], {
     return this.object;
   },
 
-  getCenterSpanMiddleVertice: function(){
-    var me = this;
-    var begin = me.centerSpan.begin;
-    var end = me.centerSpan.end;
-    var vertice = new THREE.Vector3(begin.x + (end.x - begin.x)/2, begin.y + (end.y - begin.y)/2, begin.z + (end.z - begin.z)/2);
-    return vertice;
-  },
-
-  generateRayLine: function(begin, end){
-    var lineGeometry = new THREE.Geometry();
-    lineGeometry.vertices.push(begin);
-    lineGeometry.vertices.push(end);
-    var material = new THREE.LineBasicMaterial({color: new THREE.Color('#0003ff')});
-    var line = new THREE.Line(lineGeometry, material);
-    this.viewport3d.scene.model.add(line);
-  },
-
-  generateRayFromCenterCatenaryToPoint: function(point){
-    var end = this.getCenterSpanMiddleVertice();
-    var begin = point;
-    this.generateRayLine(begin, end);
+  getIntersectsWithVeg: function(line){
+    var begin = new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
+    var end = new THREE.Vector3(line[1][0], line[1][1], line[1][2]);
     var far = Math.sqrt(Math.pow(end.x - begin.x, 2) + Math.pow(end.y - begin.y, 2) + Math.pow(end.z - begin.z, 2));
     var direction = new THREE.Vector3(end.x - begin.x, end.y - begin.y, end.z - begin.z).normalize();
     var raycaster = new THREE.Raycaster(begin, direction, 0, far);
-    return raycaster;
-  },
-
-  getIntersectsWithVeg: function(point){
-    point = new THREE.Vector3(point[0], point[1], point[2]);
-    var raycaster = this.generateRayFromCenterCatenaryToPoint(point);
     var object = this.object;
     var intersects = raycaster.intersectObject(object, true);
     var intersections = [];
@@ -216,7 +227,6 @@ var Clearance = Class([], {
     });
     return intersections;
   }
-
 });
 
 module.exports = Clearance;

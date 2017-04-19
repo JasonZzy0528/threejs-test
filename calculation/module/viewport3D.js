@@ -31,13 +31,10 @@ const Viewport3D = Class([FOUR.Viewport3D], {
 
     me.setupCamera();
 
-
-
     me.backgroundColor = new THREE.Color('#efffff');
     me.renderer.setClearColor(me.backgroundColor);
 
     me.render();
-
     me.createCenterSpan();
     me.createCatenaries();
     me.generateClearance();
@@ -79,12 +76,11 @@ const Viewport3D = Class([FOUR.Viewport3D], {
   generateClearance: function(){
     var me = this;
     var centerSpan = me.centerSpanObj;
-    var H = centerSpan.getH();
-    var S = centerSpan.getS();
-    var V = centerSpan.getV();
+    var H = me.clearanceConfig.H;
+    var S = me.clearanceConfig.S;
+    var V = me.clearanceConfig.V;
     var unitDir = centerSpan.getUnitVerticalNormal();
-    var towerHeight = centerSpan.getTowerHeight();
-    var groundZ = me.groundZ;
+    var towerHeight = me.clearanceConfig.towerHeight;
     var config = {
       centerSpan: centerSpan,
       catenaryObjArray: me.catenaryObjArray,
@@ -93,9 +89,11 @@ const Viewport3D = Class([FOUR.Viewport3D], {
       S: S,
       V: V,
       towerHeight: towerHeight,
-      groundZ: groundZ,
+      begin_groundZ: me.clearanceConfig.begin_groundZ,
+      groundZ_gap: me.clearanceConfig.groundZ_gap,
       viewport3d: me
     }
+
     var clearance = new Clearance(config).init();
     me.clearanceObj = clearance;
     me.scene.model.add(clearance.get3dObject());
