@@ -78,7 +78,7 @@ function genClearance(projectId, circuitId) {
 
       var voltage = 132;
       var spanMetres = 110;
-      var towerHeight = data[attribute].polestart_height;
+      var towerHeight = +data[attribute].polestart_height;
       var begin_groundZ = data[attribute].polestart_geom.coordinates[0][2];
       var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
       var groundZ_gap = (end_groundZ - begin_groundZ)/20;
@@ -117,12 +117,25 @@ function genClearance(projectId, circuitId) {
       // generate clearance
       var viewport3d = new Viewport3D(config);
       var clearance = viewport3d.getClearance();
+
+
+      // var scene = viewport3d.scene;
+      // var exporter = new THREE.OBJExporter();
+      // var results = exporter.parse(scene);
+      // var fs = require('fs');
+      // fs.writeFile("./tmp.OBJ", results, function(err) {
+      //   if(err) {
+      //     return console.log(err);
+      //   }
+      //   console.log("The file was saved!");
+      // });
+
       var lines = data[attribute].lines;
       _.forEach(lines, function(line){
         var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
         if(intersects.length === 1){
-          var point = `POINTZ(${intersects[0].point.x} ${intersects[0].point.y} ${intersects[0].point.z})`;
-          var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText(${point}, 28355) WHERE gid = ${line.id};`;
+          var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
+          var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355) WHERE gid = ${line.id};`;
           promises.push(db.query(sql));
         }
       });
@@ -167,14 +180,21 @@ function genCenterline(data){
   return data;
 }
 
+// function subOffset(point){
+//   var offset = [288947.3895096503, 6154893.460849883, 139.76762796527123];
+//   return [point[0] - offset[0], point[1] - offset[1], point[2] - offset[2]]
+// }
+
 function getAllData(projectId, circuitId){
+
   return new Promise(function(resolve, reject){
     var catenary_table = `public.catenaries_${projectId}`;
     var centerline_table = `public.centerlines_${projectId}`;
     veg_clearance_table = `public.veg_clearances_${projectId}`;
     veg_clearance_table_name = `veg_clearances_${projectId}`;
     var pole_table = `poles_${projectId}`;
-    var sql = `SELECT pairs.polestart, polestart.polestart_geom, polestart.polestart_height, pairs.poleend, poleend.poleend_geom, poleend.poleend_height, cats.gid cat_id, st_asgeojson(cats.geom) cat_geom, st_asgeojson(lines.geom) line_geom, lines.gid line_gid FROM (SELECT * FROM ${centerline_table}) pairs, (SELECT * FROM ${catenary_table}) cats, (SELECT * FROM ${veg_clearance_table} WHERE circuit = ${circuitId}) lines, LATERAL (SELECT st_asgeojson(geom), height FROM poles_150205403579429 where gid = pairs.polestart) polestart(polestart_geom, polestart_height), LATERAL (SELECT st_asgeojson(geom), height FROM poles_150205403579429 where gid = pairs.poleend) poleend(poleend_geom, poleend_height) WHERE ((cats.polestart = pairs.polestart AND cats.poleend = pairs.poleend) OR (cats.polestart = pairs.poleend AND cats.poleend = pairs.polestart)) AND (cats.gid = lines.cond_id);`;
+    var sql = `SELECT pairs.polestart, polestart.polestart_geom, polestart.polestart_height, pairs.poleend, poleend.poleend_geom, poleend.poleend_height, cats.gid cat_id, st_asgeojson(cats.geom) cat_geom, st_asgeojson(lines.geom) line_geom, lines.gid line_gid FROM (SELECT * FROM ${centerline_table}) pairs, (SELECT * FROM ${catenary_table}) cats, (SELECT * FROM ${veg_clearance_table} WHERE circuit = ${circuitId}) lines, LATERAL (SELECT st_asgeojson(geom), height FROM ${pole_table} where gid = pairs.polestart) polestart(polestart_geom, polestart_height), LATERAL (SELECT st_asgeojson(geom), height FROM ${pole_table} where gid = pairs.poleend) poleend(poleend_geom, poleend_height) WHERE ((cats.polestart = pairs.polestart AND cats.poleend = pairs.poleend) OR (cats.polestart = pairs.poleend AND cats.poleend = pairs.polestart)) AND (cats.gid = lines.cond_id);`;
+
     db.query(sql).then(function(data){
       var centerline_list = {};
       _.forEach(data, function(record){
@@ -188,6 +208,21 @@ function getAllData(projectId, circuitId){
         var cat_geom = JSON.parse(record.cat_geom);
         var line_geom = JSON.parse(record.line_geom);
         var line_gid = record.line_gid;
+
+        // sub offset
+        // _.forEach(cat_geom.coordinates, function(coordinate, index){
+        //   cat_geom.coordinates[index] = subOffset(coordinate)
+        // });
+        // _.forEach(polestart_geom.coordinates, function(coordinate, index){
+        //   polestart_geom.coordinates[index] = subOffset(coordinate);
+        // });
+        // _.forEach(line_geom.coordinates, function(coordinate, index){
+        //   line_geom.coordinates[index] = subOffset(coordinate)
+        // });
+        // _.forEach(poleend_geom.coordinates, function(coordinate, index){
+        //   poleend_geom.coordinates[index] = subOffset(coordinate);
+        // });
+
         if(centerline_list.hasOwnProperty(`${polestart}_${poleend}`)){
           if(_.findIndex(centerline_list[`${polestart}_${poleend}`].cats,function(o){return o.id == cat_id}) == -1){
             centerline_list[`${polestart}_${poleend}`].cats.push({id: cat_id, geom: cat_geom});

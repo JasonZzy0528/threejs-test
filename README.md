@@ -2,7 +2,7 @@
 
 ## Table Of Contents
 - [Installation](#installation)
-- [Build & Develoment](#build-&-development)
+- [Build & Develoment](#build--development)
 - [Deployment](#deployment)
 
 ## Installation
@@ -31,4 +31,4 @@ For generate server-side clearance calculation:
 
   ```
 
-  ## Deployment
+## Deployment
