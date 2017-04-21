@@ -131,11 +131,13 @@ function genClearance(projectId, circuitId) {
       // });
 
       var lines = data[attribute].lines;
+      console.log(`Updating ${veg_clearance_table}`);
       _.forEach(lines, function(line){
         var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
         if(intersects.length === 1){
           var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
           var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355) WHERE gid = ${line.id};`;
+          console.log(sql);
           promises.push(db.query(sql));
         }
       });
@@ -188,14 +190,11 @@ function genCenterline(data){
 function getAllData(projectId, circuitId){
 
   return new Promise(function(resolve, reject){
-    var catenary_table = `public.catenaries_${projectId}`;
-    var centerline_table = `public.centerlines_${projectId}`;
     veg_clearance_table = `public.veg_clearances_${projectId}`;
     veg_clearance_table_name = `veg_clearances_${projectId}`;
-    var pole_table = `poles_${projectId}`;
-    var sql = `SELECT pairs.polestart, polestart.polestart_geom, polestart.polestart_height, pairs.poleend, poleend.poleend_geom, poleend.poleend_height, cats.gid cat_id, st_asgeojson(cats.geom) cat_geom, st_asgeojson(lines.geom) line_geom, lines.gid line_gid FROM (SELECT * FROM ${centerline_table}) pairs, (SELECT * FROM ${catenary_table}) cats, (SELECT * FROM ${veg_clearance_table} WHERE circuit = ${circuitId}) lines, LATERAL (SELECT st_asgeojson(geom), height FROM ${pole_table} where gid = pairs.polestart) polestart(polestart_geom, polestart_height), LATERAL (SELECT st_asgeojson(geom), height FROM ${pole_table} where gid = pairs.poleend) poleend(poleend_geom, poleend_height) WHERE ((cats.polestart = pairs.polestart AND cats.poleend = pairs.poleend) OR (cats.polestart = pairs.poleend AND cats.poleend = pairs.polestart)) AND (cats.gid = lines.cond_id);`;
-
-    db.query(sql).then(function(data){
+    var sql = 'SELECT * FROM veg_clearance_intersects($1, $2)';
+    var params = [parseInt(projectId), parseInt(circuitId)];
+    db.query(sql, params).then(function(data){
       var centerline_list = {};
       _.forEach(data, function(record){
         var polestart = record.polestart;
