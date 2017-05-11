@@ -77,7 +77,7 @@ function genClearance(projectId, circuitId) {
       var centerSpan = [beginAvg, endAvg];
 
       var voltage = 132;
-      var spanMetres = 110;
+      var spanMetres = data[attribute].line_span_length;
       var towerHeight = +data[attribute].polestart_height;
       var begin_groundZ = data[attribute].polestart_geom.coordinates[0][2];
       var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
@@ -209,6 +209,7 @@ function getAllData(projectId, circuitId){
         var cat_geom = JSON.parse(record.cat_geom);
         var line_geom = JSON.parse(record.line_geom);
         var line_gid = record.line_gid;
+        var line_span_length = record.line_span_length;
 
         // sub offset
         _.forEach(cat_geom.coordinates, function(coordinate, index){
@@ -239,6 +240,7 @@ function getAllData(projectId, circuitId){
             poleend: poleend,
             poleend_geom: poleend_geom,
             poleend_height: poleend_height,
+            line_span_length: line_span_length,
             cats:[{
               id: cat_id,
               geom: cat_geom

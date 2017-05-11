@@ -212,8 +212,8 @@ var Clearance = Class([], {
   },
 
   getIntersectsWithVeg: function(line){
-    var begin = new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
-    var end = new THREE.Vector3(line[1][0], line[1][1], line[1][2]);
+    var end = new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
+    var begin = new THREE.Vector3(line[1][0], line[1][1], line[1][2]);
     var far = Math.sqrt(Math.pow(end.x - begin.x, 2) + Math.pow(end.y - begin.y, 2) + Math.pow(end.z - begin.z, 2));
     var direction = new THREE.Vector3(end.x - begin.x, end.y - begin.y, end.z - begin.z).normalize();
     var raycaster = new THREE.Raycaster(begin, direction, 0, far);
