@@ -124,35 +124,40 @@ function genClearance(projectId, circuitId) {
         var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
         if(intersects.length === 1){
           var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
-          var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355) WHERE gid = ${line.id};`;
+          var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
           console.log(sql);
-          // promises.push(db.query(sql));
+          promises.push(db.query(sql));
+        }else{
+          var sql = `UPDATE ${veg_clearance_table} SET p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
+          promises.push(db.query(sql));
+          console.log(sql);
         }
       });
 
-      // console.log(typeof viewport3d.scene.model);
-      var scene = viewport3d.scene.model;
-      // console.log(typeof scene);
-      var exporter = new THREE.OBJExporter();
-      var results = exporter.parse(scene);
-      var fs = require('fs');
-      fs.writeFile("./tmp.OBJ", results, function(err) {
-        if(err) {
-          return console.log(err);
-        }
-        console.log("The file was saved!");
-      });
+      // output OBJ
+      // var scene = viewport3d.scene.model;
+      // var exporter = new THREE.OBJExporter();
+      // var results = exporter.parse(scene);
+      // var fs = require('fs');
+      // fs.writeFile("./tmp.OBJ", results, function(err) {
+      //   if(err) {
+      //     return console.log(err);
+      //   }
+      //   console.log("The file was saved!");
+      // });
 
     });
-    // if(promises.length > 0){
-    //   Promise.all(promises).then(function(){
-    //     console.log('Done');
-    //   }).catch(function(err){
-    //     console.log(err);
-    //   })
-    // }else{
-    //   console.log('Done');
-    // }
+
+    // update veg_clearance_table
+    if(promises.length > 0){
+      Promise.all(promises).then(function(){
+        console.log('Done');
+      }).catch(function(err){
+        console.log(err);
+      })
+    }else{
+      console.log('Done');
+    }
   });
 }
 
@@ -209,7 +214,7 @@ function getAllData(projectId, circuitId){
         var cat_geom = JSON.parse(record.cat_geom);
         var line_geom = JSON.parse(record.line_geom);
         var line_gid = record.line_gid;
-        var line_span_length = record.line_span_length;
+        var line_span_length = record.cat_span_length;
 
         // sub offset
         _.forEach(cat_geom.coordinates, function(coordinate, index){

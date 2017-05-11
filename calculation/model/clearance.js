@@ -226,7 +226,6 @@ var Clearance = Class([], {
       }
     });
     if(intersections.length > 0){
-      console.log(0)
       // this.genIntersects(intersections);
       this.generateRayLine(begin, end);
     }
