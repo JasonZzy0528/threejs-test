@@ -118,18 +118,6 @@ function genClearance(projectId, circuitId) {
       var viewport3d = new Viewport3D(config);
       var clearance = viewport3d.getClearance();
 
-
-      // var scene = viewport3d.scene;
-      // var exporter = new THREE.OBJExporter();
-      // var results = exporter.parse(scene);
-      // var fs = require('fs');
-      // fs.writeFile("./tmp.OBJ", results, function(err) {
-      //   if(err) {
-      //     return console.log(err);
-      //   }
-      //   console.log("The file was saved!");
-      // });
-
       var lines = data[attribute].lines;
       console.log(`Updating ${veg_clearance_table}`);
       _.forEach(lines, function(line){
@@ -138,19 +126,33 @@ function genClearance(projectId, circuitId) {
           var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
           var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355) WHERE gid = ${line.id};`;
           console.log(sql);
-          promises.push(db.query(sql));
+          // promises.push(db.query(sql));
         }
       });
+
+      // console.log(typeof viewport3d.scene.model);
+      var scene = viewport3d.scene.model;
+      // console.log(typeof scene);
+      var exporter = new THREE.OBJExporter();
+      var results = exporter.parse(scene);
+      var fs = require('fs');
+      fs.writeFile("./tmp.OBJ", results, function(err) {
+        if(err) {
+          return console.log(err);
+        }
+        console.log("The file was saved!");
+      });
+
     });
-    if(promises.length > 0){
-      Promise.all(promises).then(function(){
-        console.log('Done');
-      }).catch(function(err){
-        console.log(err);
-      })
-    }else{
-      console.log('Done');
-    }
+    // if(promises.length > 0){
+    //   Promise.all(promises).then(function(){
+    //     console.log('Done');
+    //   }).catch(function(err){
+    //     console.log(err);
+    //   })
+    // }else{
+    //   console.log('Done');
+    // }
   });
 }
 
@@ -182,10 +184,10 @@ function genCenterline(data){
   return data;
 }
 
-// function subOffset(point){
-//   var offset = [288947.3895096503, 6154893.460849883, 139.76762796527123];
-//   return [point[0] - offset[0], point[1] - offset[1], point[2] - offset[2]]
-// }
+function subOffset(point){
+  var offset = [288947.3895096503, 6154893.460849883, 139.76762796527123];
+  return [point[0] - offset[0], point[1] - offset[1], point[2] - offset[2]]
+}
 
 function getAllData(projectId, circuitId){
 
@@ -209,18 +211,18 @@ function getAllData(projectId, circuitId){
         var line_gid = record.line_gid;
 
         // sub offset
-        // _.forEach(cat_geom.coordinates, function(coordinate, index){
-        //   cat_geom.coordinates[index] = subOffset(coordinate)
-        // });
-        // _.forEach(polestart_geom.coordinates, function(coordinate, index){
-        //   polestart_geom.coordinates[index] = subOffset(coordinate);
-        // });
-        // _.forEach(line_geom.coordinates, function(coordinate, index){
-        //   line_geom.coordinates[index] = subOffset(coordinate)
-        // });
-        // _.forEach(poleend_geom.coordinates, function(coordinate, index){
-        //   poleend_geom.coordinates[index] = subOffset(coordinate);
-        // });
+        _.forEach(cat_geom.coordinates, function(coordinate, index){
+          cat_geom.coordinates[index] = subOffset(coordinate)
+        });
+        _.forEach(polestart_geom.coordinates, function(coordinate, index){
+          polestart_geom.coordinates[index] = subOffset(coordinate);
+        });
+        _.forEach(line_geom.coordinates, function(coordinate, index){
+          line_geom.coordinates[index] = subOffset(coordinate)
+        });
+        _.forEach(poleend_geom.coordinates, function(coordinate, index){
+          poleend_geom.coordinates[index] = subOffset(coordinate);
+        });
 
         if(centerline_list.hasOwnProperty(`${polestart}_${poleend}`)){
           if(_.findIndex(centerline_list[`${polestart}_${poleend}`].cats,function(o){return o.id == cat_id}) == -1){

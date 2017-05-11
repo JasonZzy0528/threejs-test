@@ -144,6 +144,7 @@ define(
           if(me.SELECTED_TOWER && ctrlTransform.getMode() == 'scale'){
             me.SELECTED_TOWER.update();
           }
+          console.log(ctrlTransform.object)
         });
         ctrlTransform.setMode('scale');
         ctrlTransform.name = 'transform_control';

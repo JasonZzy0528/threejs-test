@@ -225,8 +225,35 @@ var Clearance = Class([], {
         intersections.push(intersect.point);
       }
     });
+    if(intersections.length > 0){
+      console.log(0)
+      // this.genIntersects(intersections);
+      this.generateRayLine(begin, end);
+    }
     return intersections;
+  },
+
+  genIntersects: function(points){
+    var geometry = new THREE.Geometry();
+    _.forEach(points, function(point){
+      geometry.vertices.push(point);
+    });
+    var material = new THREE.PointsMaterial( { size: 1, color: new THREE.Color('#d53434')} );
+    var intersects = new THREE.Points(geometry, material);
+    intersects.name = 'intersects';
+    this.viewport3d.scene.model.add(intersects);
+  },
+
+  generateRayLine: function(begin, end){
+    var lineGeometry = new THREE.Geometry();
+    lineGeometry.vertices.push(begin);
+    lineGeometry.vertices.push(end);
+    var material = new THREE.LineBasicMaterial({color: new THREE.Color('#0003ff')});
+    var line = new THREE.Line(lineGeometry, material);
+    line.name = 'line_' + Math.floor((Math.random() * 10) + 1).toString();
+    this.viewport3d.scene.model.add(line);
   }
+
 });
 
 module.exports = Clearance;
