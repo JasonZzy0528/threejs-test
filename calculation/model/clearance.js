@@ -6,7 +6,11 @@ var Clearance = Class([], {
   constructor: function(config){
     var me = this;
     me.material = new THREE.MeshBasicMaterial({
-      side: THREE.DoubleSide
+      color: new THREE.Color('#33d7c4'),
+      wireframe: false,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.FrontSide
     });
     _.extend(me, config);
   },
@@ -16,88 +20,28 @@ var Clearance = Class([], {
     var unitDir = me.centerSpan.getUnitVerticalNormal();
 
     var beginVerticeOnCenterCatenary = me.centerSpan.getBegin();
+    var endVerticeOnCenterCatenary = me.centerSpan.getEnd();
     var left, right, bottom, rightBottom, leftBottom;
 
     var catenaryObjArray = me.catenaryObjArray;
-    if(catenaryObjArray.length == 1){
-      rightBottom = 0;
-      leftBottom = 0;
-      bottom = 0;
-      left = 0;
-      right = 0;
-    }else{
-      _.forEach(catenaryObjArray, function(catenary, index){
-        //check angle between one catenary begin point to centerCatenary end point and centerCatenary vertical normal
-        var angle = catenary.getAngleToCatenary(me.centerSpan.getUnitVerticalNormal(),beginVerticeOnCenterCatenary, 0);
-        // left catenary
-        if(angle <= .5*Math.PI && angle > 0){
-          if(left == undefined){
-            left = index;
-          }else{
-            var leftAngle = catenary.getAngleToCatenary(catenaryObjArray[left].getUnitVerticalNormal(),catenaryObjArray[left].getBegin(), 0);
-            if(leftAngle <= .5*Math.PI && leftAngle > 0){
-              left = index;
-            }
-          }
-          var z = catenary.getBegin().z;
-          if(leftBottom == undefined){
-            leftBottom = index
-          }else if(leftBottom){
-            if(z < catenaryObjArray[leftBottom].getBegin().z){
-              leftBottom = index
-            }
-          }
-        }else if(angle > .5*Math.PI && angle < Math.PI){
-          //right catenary
-          if(right == undefined){
-            right = index;
-          }else{
-            var rightAngle = catenary.getAngleToCatenary(catenaryObjArray[right].getUnitVerticalNormal(),catenaryObjArray[right].getBegin(), 0);
-            if(rightAngle > .5*Math.PI && rightAngle < Math.PI){
-              right = index;
-            }
-          }
 
-          var z = catenary.getBegin().z;
-          if(rightBottom == undefined){
-            rightBottom = index
-          }else if(rightBottom){
-            if(z < catenaryObjArray[rightBottom].getBegin().z){
-              rightBottom = index
-            }
-          }
-        }
-
-        // bottom catenary
-        var z = catenary.getBegin().z;
-        if(!bottom){
-          bottom = index
-        }else if(bottom){
-          if(z < catenaryObjArray[bottom].getBegin().z){
-            bottom = index
-          }
-        }
-      });
-    }
-
-    me.rightPoints = catenaryObjArray[right].getRightBound();
-    me.leftPoints = catenaryObjArray[left].getLeftBound();
-    me.bottomPoints = catenaryObjArray[bottom].getBottomBound();
-    me.rightBottomPoints = catenaryObjArray[rightBottom].getBottomBound();
-    me.leftBottomPoints = catenaryObjArray[leftBottom].getBottomBound();
     var clearanceGeometry = new THREE.Geometry();
-    var clearanceVertices = [];
 
     for(var i = 0; i < 21; i++){
-      var spanVertices = me.getSpanVertices(i);
+      var vertices = [];
+      _.forEach(catenaryObjArray,function(catenary){
+        vertices.push(catenary.getVertices()[i]);
+      });
+      var position = me.detectPosition(vertices, beginVerticeOnCenterCatenary, endVerticeOnCenterCatenary);
+      var spanVertices = me.getSpanVertices(i, position);
       clearanceGeometry.vertices = clearanceGeometry.vertices.concat(spanVertices);
       if(i < 5 || i > 16){
         if(i == 0){
-          clearanceGeometry.faces.push(new THREE.Face3(0,1,3));
-          clearanceGeometry.faces.push(new THREE.Face3(1,2,3));
+          // clearanceGeometry.faces.push(new THREE.Face3(0,1,3));
+          // clearanceGeometry.faces.push(new THREE.Face3(1,2,3));
         }else if(i == 20){
-          clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 1, clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 4));
-          clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 3, clearanceGeometry.vertices.length - 4));
+          // clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 1, clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 4));
+          // clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 3, clearanceGeometry.vertices.length - 4));
           // connect to end
           var beginIndex =  5*4 + 10*6;
           var endIndex = clearanceGeometry.vertices.length - 1 - 3;
@@ -150,59 +94,174 @@ var Clearance = Class([], {
     return this;
   },
 
-  getSpanVertices: function(index){
+  // check point position
+  detectPosition: function(vertices, begin, end, unitDir){
     var me = this;
-    var towerHeight = me.towerHeight;
-    var begin_groundZ = me.begin_groundZ;
+
+    // check if called from other class
+    if(unitDir == undefined){
+      unitDir = me.unitDir;
+    }
+
+    var position = {};
+
+    _.forEach(vertices, function(vertice, index){
+      var verticeToCenterSpan = new THREE.Vector3(vertice.x - begin.x, vertice.y - begin.y, vertice.z - begin.z);
+
+      var angle3d = unitDir.angleTo(verticeToCenterSpan);
+      var distanceA = Math.sqrt(Math.pow(end.x - begin.x, 2) + Math.pow(end.y - begin.y, 2));
+      var distanceB = Math.sqrt(Math.pow(vertice.x - begin.x, 2) + Math.pow(vertice.y - begin.y, 2));
+      var distanceC = Math.sqrt(Math.pow(vertice.x - end.x, 2) + Math.pow(vertice.y - end.y, 2));
+      var angle =  Math.acos((Math.pow(distanceA,2) + Math.pow(distanceB, 2) - Math.pow(distanceC, 2))/(2*distanceA*distanceB));
+      var distance = distanceB;
+      if(angle3d <= .5*Math.PI && angle >= 0){
+        if(position.left == undefined){
+          position.left = {
+            vertice: vertice,
+            distance: Math.sin(angle)*distance
+          };
+        }else{
+          if(Math.sin(angle)*distance > position.left.distance){
+            position.left = {
+              vertice: vertice,
+              distance: Math.sin(angle)*distance
+            };
+          }
+        }
+        if(position.leftBottom == undefined){
+          position.leftBottom = {
+            vertice: vertice,
+            z: vertice.z
+          };
+        }else if(position.leftBottom.z > vertice.z){
+          position.leftBottom = {
+            vertice: vertice,
+            z: vertice.z
+          };
+        }
+      }else{
+        //right catenary
+        if(position.right == undefined){
+          position.right = {
+            vertice: vertice,
+            distance: Math.sin(angle)*distance
+          };
+        }else{
+          if(Math.sin(angle)*distance > position.right.distance){
+            position.right = {
+              vertice: vertice,
+              distance: Math.sin(angle)*distance
+            };
+          }
+        }
+        if(position.rightBottom == undefined){
+          position.rightBottom = {
+            vertice: vertice,
+            z: vertice.z
+          };
+        }else if(position.rightBottom.z > vertice.z){
+          position.rightBottom = {
+            vertice: vertice,
+            z: vertice.z
+          };
+        }
+      }
+    });
+
+    position.bottom = {
+      vertice: position.leftBottom.z<position.rightBottom.z?position.leftBottom.vertice:position.rightBottom.vertice
+    };
+
+    return position;
+  },
+
+  getSpanVertices: function(index, vertices){
+    var me = this;
+    var towerHeight = me.start_towerHeight + index*me.towerHeight_gap;
+    var start_groundZ = me.start_groundZ;
     var groundZ_gap = me.groundZ_gap;
+    var H = me.H;
+    var S = me.S;
+    var V = me.V;
+    var P = me.P;
+
+    var unitDir = me.unitDir;
     if(index < 5 || index > 15){
-      var topLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, 5 + towerHeight + begin_groundZ + groundZ_gap*index);
-      var topRight = new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, 5 + towerHeight + begin_groundZ + groundZ_gap*index);
-      var bottomRight = new THREE.Vector3(me.rightPoints[index].x, me.rightPoints[index].y, me.bottomPoints[index].z);
-      var bottomLeft = new THREE.Vector3(me.leftPoints[index].x, me.leftPoints[index].y, me.bottomPoints[index].z);
+      var topLeft = new THREE.Vector3(vertices.left.vertice.x + P*unitDir.x, vertices.left.vertice.y + P*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+      var topRight = new THREE.Vector3(vertices.right.vertice.x - P*unitDir.x, vertices.right.vertice.y - P*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+      var bottomRight = new THREE.Vector3(vertices.right.vertice.x - P*unitDir.x, vertices.right.vertice.y - P*unitDir.y, vertices.bottom.vertice.z - P);
+      var bottomLeft = new THREE.Vector3(vertices.left.vertice.x + P*unitDir.x, vertices.left.vertice.y + P*unitDir.y, vertices.bottom.vertice.z - P);
       return [topLeft, topRight, bottomRight, bottomLeft];
     }else{
-      var H = me.H;
-      var S = me.S;
-      var V = me.V;
-      var unitDir = me.unitDir;
       var centerSpanIndexedPoint = me.centerSpan.getIndexedPoint(index);
-      var rightDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - me.rightPoints[index].x, 2) + Math.pow(centerSpanIndexedPoint.y - me.rightPoints[index].y, 2));
-      var leftDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - me.leftPoints[index].x, 2) + Math.pow(centerSpanIndexedPoint.y - me.leftPoints[index].y, 2));
-
+      var rightDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - vertices.right.vertice.x + H*unitDir.x, 2) + Math.pow(centerSpanIndexedPoint.y - vertices.right.vertice.y + H*unitDir.y, 2));
+      var leftDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - vertices.left.vertice.x - H*unitDir.x, 2) + Math.pow(centerSpanIndexedPoint.y - vertices.left.vertice.y - H*unitDir.y, 2));
+      // right: x - y - s - rightDistance + h + 3*Math.sqrt(2) = 0
+      // left: x + y + s + leftDistance - h - 3*Math.sqrt(2) = 0
       var topLeft =  new THREE.Vector3(
-        me.leftPoints[index].x,
-        me.leftPoints[index].y,
-        5 + towerHeight + begin_groundZ + groundZ_gap*index);
+        vertices.left.vertice.x + H*unitDir.x,
+        vertices.left.vertice.y + H*unitDir.y,
+        5 + towerHeight + start_groundZ + groundZ_gap*index
+      );
       var topRight =  new THREE.Vector3(
-        me.rightPoints[index].x,
-        me.rightPoints[index].y,
-        5 + towerHeight + begin_groundZ + groundZ_gap*index);
-
-      var middleRight = new THREE.Vector3(
-        me.rightPoints[index].x,
-        me.rightPoints[index].y,
-        Math.sqrt(2) * 3 + rightDistance - S + begin_groundZ + groundZ_gap*index
+        vertices.right.vertice.x - H*unitDir.x,
+        vertices.right.vertice.y - H*unitDir.y,
+        5 + towerHeight + start_groundZ + groundZ_gap*index
       );
 
-      var bottomRight = new THREE.Vector3(
-        me.rightPoints[index].x + (rightDistance - S - (me.rightBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
-        me.rightPoints[index].y + (rightDistance - S - (me.rightBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
-        me.rightBottomPoints[index].z
-      );
+      var middleRight, bottomRight, middleLeft, bottomLeft;
+      // check intersections
+      if(rightDistance - S + 3*Math.sqrt(2) + start_groundZ + groundZ_gap*index > vertices.rightBottom.vertice.z - V){
 
-      var bottomLeft = new THREE.Vector3(
-        me.leftPoints[index].x - (leftDistance - S - (me.leftBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x ,
-        me.leftPoints[index].y - (leftDistance - S - (me.leftBottomPoints[index].z - (begin_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y ,
-        me.leftBottomPoints[index].z
-      );
+        middleRight = new THREE.Vector3(
+          vertices.right.vertice.x - H*unitDir.x,
+          vertices.right.vertice.y - H*unitDir.y,
+          Math.sqrt(2) * 3 + rightDistance - S + start_groundZ + groundZ_gap*index
+        );
 
-      var middleLeft = new THREE.Vector3(
-        me.leftPoints[index].x,
-        me.leftPoints[index].y,
-        Math.sqrt(2) * 3 + leftDistance - S + begin_groundZ + groundZ_gap*index
-      );
+        bottomRight = new THREE.Vector3(
+          vertices.right.vertice.x - H*unitDir.x + (rightDistance - S - (vertices.rightBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
+          vertices.right.vertice.y - H*unitDir.y + (rightDistance - S - (vertices.rightBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
+          vertices.rightBottom.vertice.z - V
+        );
+      }else{
+        middleRight = new THREE.Vector3(
+          vertices.right.vertice.x - H*unitDir.x,
+          vertices.right.vertice.y - H*unitDir.y,
+          vertices.rightBottom.vertice.z - V
+        );
+        bottomRight = new THREE.Vector3(
+          vertices.right.vertice.x - H*unitDir.x,
+          vertices.right.vertice.y - H*unitDir.y,
+          vertices.rightBottom.vertice.z - V
+        );
+      }
 
+      if(leftDistance - S + 3*Math.sqrt(2) + start_groundZ + groundZ_gap*index > vertices.leftBottom.vertice.z - V){
+
+        bottomLeft = new THREE.Vector3(
+          vertices.left.vertice.x + H*unitDir.x - (leftDistance - S - (vertices.leftBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
+          vertices.left.vertice.y + H*unitDir.y - (leftDistance - S - (vertices.leftBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
+          vertices.leftBottom.vertice.z - V
+        );
+
+        middleLeft = new THREE.Vector3(
+          vertices.left.vertice.x + H*unitDir.x,
+          vertices.left.vertice.y + H*unitDir.y,
+          Math.sqrt(2) * 3 + leftDistance - S + start_groundZ + groundZ_gap*index
+        );
+      }else{
+        bottomLeft = new THREE.Vector3(
+          vertices.left.vertice.x + H*unitDir.x,
+          vertices.left.vertice.y + H*unitDir.y,
+          vertices.leftBottom.vertice.z - V
+        );
+        middleLeft = new THREE.Vector3(
+          vertices.left.vertice.x + H*unitDir.x,
+          vertices.left.vertice.y + H*unitDir.y,
+          vertices.leftBottom.vertice.z - V
+        );
+      }
       return [topLeft, topRight, middleRight, bottomRight, bottomLeft, middleLeft];
     }
   },

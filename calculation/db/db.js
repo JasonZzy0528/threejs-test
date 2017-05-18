@@ -47,105 +47,110 @@ function genClearance(projectId, circuitId) {
     var promises = [];
     // generate clearance for each center span
     _.forEach(Object.keys(data), function(attribute){
-      // generate center span
-      var cats = data[attribute].cats;
-      var beginAvg = [0,0,0];
-      var endAvg = [0,0,0];
-      _.forEach(cats, function(cat){
-        var begin = cat.geom.coordinates[0];
-        var end = cat.geom.coordinates[2]
-        var x;
-        if(begin[0] > end[0]){
-          x = end;
-          end = begin;
-          begin = x;
-        }
-        beginAvg[0] += begin[0];
-        beginAvg[1] += begin[1];
-        beginAvg[2] += begin[2];
-        endAvg[0] += end[0];
-        endAvg[1] += end[1];
-        endAvg[2] += end[2];
-      });
-      var n = cats.length;
-      beginAvg[0] /= n;
-      beginAvg[1] /= n;
-      beginAvg[2] /= n;
-      endAvg[0] /= n;
-      endAvg[1] /= n;
-      endAvg[2] /= n;
-      var centerSpan = [beginAvg, endAvg];
+      if(data[attribute].lines.length > 0){
+        // generate center span
+        var cats = data[attribute].cats;
+        var beginAvg = [0,0,0];
+        var endAvg = [0,0,0];
+        _.forEach(cats, function(cat){
+          var begin = cat.geom.coordinates[0];
+          var end = cat.geom.coordinates[2];
+          var x;
+          if(begin[0] > end[0]){
+            x = end;
+            end = begin;
+            begin = x;
+          }
+          beginAvg[0] += begin[0];
+          beginAvg[1] += begin[1];
+          beginAvg[2] += begin[2];
+          endAvg[0] += end[0];
+          endAvg[1] += end[1];
+          endAvg[2] += end[2];
+        });
+        var n = cats.length;
+        beginAvg[0] /= n;
+        beginAvg[1] /= n;
+        beginAvg[2] /= n;
+        endAvg[0] /= n;
+        endAvg[1] /= n;
+        endAvg[2] /= n;
+        var centerSpan = [beginAvg, endAvg];
+        var voltage = 132;
+        var spanMetres = data[attribute].line_span_length;
+        var start_towerHeight = +data[attribute].polestart_height;
+        var end_towerHeight = +data[attribute].poleend_height;
+        var towerHeight_gap = (end_towerHeight - start_towerHeight)/20;
 
-      var voltage = 132;
-      var spanMetres = data[attribute].line_span_length;
-      var towerHeight = +data[attribute].polestart_height;
-      var begin_groundZ = data[attribute].polestart_geom.coordinates[0][2];
-      var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
-      var groundZ_gap = (end_groundZ - begin_groundZ)/20;
-      var clearanceConfig = {
-        towerHeight: towerHeight,
-        begin_groundZ: begin_groundZ,
-        groundZ_gap: groundZ_gap
-      };
+        var start_groundZ = data[attribute].polestart_geom.coordinates[0][2];
+        var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
+        var groundZ_gap = (end_groundZ - start_groundZ)/20;
+        var clearanceConfig = {
+          start_towerHeight: start_towerHeight,
+          towerHeight_gap: towerHeight_gap,
+          start_groundZ: start_groundZ,
+          groundZ_gap: groundZ_gap
+        };
+        _.forEach(conductorConfig.type, function(type){
+          if(type.voltage == voltage){
+            clearanceConfig.P = type.p;
+            clearanceConfig.B = type.b;
+            _.forEach(type.span, function(span){
+              if((span.metersMore < spanMetres && span.metersLess && span.metersLess >= spanMetres) || (span.metersMore < spanMetres && !span.metersLess)){
+                clearanceConfig.V = span.v;
+                clearanceConfig.H = span.h;
+                clearanceConfig.S = span.s;
+                clearanceConfig['S*'] = span['s*'];
+              }
+            });
+          }
+        });
+        cats = cleanCatenaries(_.map(cats, function(cat){
+          return cat.geom.coordinates;
+        }));
+        var config = {
+          catenaries: cats,
+          centerSpan: centerSpan,
+          domElement: {
+            clientWidth: 0,
+            clientHeight: 0
+          },
+          clearanceConfig: clearanceConfig
+        };
 
-      _.forEach(conductorConfig.type, function(type){
-        if(type.voltage == voltage){
-          clearanceConfig.P = type.p;
-          clearanceConfig.B = type.b;
-          _.forEach(type.span, function(span){
-            if((span.metersMore < spanMetres && span.metersLess && span.metersLess >= spanMetres) || (span.metersMore < spanMetres && !span.metersLess)){
-              clearanceConfig.V = span.v;
-              clearanceConfig.H = span.h;
-              clearanceConfig.S = span.s;
-              clearanceConfig['S*'] = span['s*'];
-            }
-          });
-        }
-      });
-      cats = cleanCatenaries(_.map(cats, function(cat){
-        return cat.geom.coordinates;
-      }));
-      var config = {
-        catenaries: cats,
-        centerSpan: centerSpan,
-        domElement: {
-          clientWidth: 0,
-          clientHeight: 0
-        },
-        clearanceConfig: clearanceConfig
-      };
-      // generate clearance
-      var viewport3d = new Viewport3D(config);
-      var clearance = viewport3d.getClearance();
+        // generate clearance
+        var viewport3d = new Viewport3D(config);
 
-      var lines = data[attribute].lines;
-      console.log(`Updating ${veg_clearance_table}`);
-      _.forEach(lines, function(line){
-        var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
-        if(intersects.length === 1){
-          var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
-          var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
-          console.log(sql);
-          promises.push(db.query(sql));
-        }else{
-          var sql = `UPDATE ${veg_clearance_table} SET p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-          promises.push(db.query(sql));
-          console.log(sql);
-        }
-      });
+        var clearance = viewport3d.getClearance();
 
-      // output OBJ
-      // var scene = viewport3d.scene.model;
-      // var exporter = new THREE.OBJExporter();
-      // var results = exporter.parse(scene);
-      // var fs = require('fs');
-      // fs.writeFile("./tmp.OBJ", results, function(err) {
-      //   if(err) {
-      //     return console.log(err);
-      //   }
-      //   console.log("The file was saved!");
-      // });
+        var lines = data[attribute].lines;
+        console.log(`Updating ${veg_clearance_table}`);
+        _.forEach(lines, function(line){
+          var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
+          if(intersects.length === 1){
+            var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
+            var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
+            console.log(sql);
+            promises.push(db.query(sql));
+          }else{
+            var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
+            promises.push(db.query(sql));
+            console.log(sql);
+          }
+        });
 
+        // output OBJ
+        // var scene = viewport3d.scene.model;
+        // var exporter = new THREE.OBJExporter();
+        // var results = exporter.parse(scene);
+        // var fs = require('fs');
+        // fs.writeFile("./tmp.OBJ", results, function(err) {
+        //   if(err) {
+        //     return console.log(err);
+        //   }
+        //   console.log("The file was saved!");
+        // });
+      }
     });
 
     // update veg_clearance_table
@@ -216,26 +221,30 @@ function getAllData(projectId, circuitId){
         var line_gid = record.line_gid;
         var line_span_length = record.cat_span_length;
 
-        // sub offset
-        _.forEach(cat_geom.coordinates, function(coordinate, index){
-          cat_geom.coordinates[index] = subOffset(coordinate)
-        });
-        _.forEach(polestart_geom.coordinates, function(coordinate, index){
-          polestart_geom.coordinates[index] = subOffset(coordinate);
-        });
-        _.forEach(line_geom.coordinates, function(coordinate, index){
-          line_geom.coordinates[index] = subOffset(coordinate)
-        });
-        _.forEach(poleend_geom.coordinates, function(coordinate, index){
-          poleend_geom.coordinates[index] = subOffset(coordinate);
-        });
+        // sub offset only for test
+        // _.forEach(cat_geom.coordinates, function(coordinate, index){
+        //   cat_geom.coordinates[index] = subOffset(coordinate)
+        // });
+        // _.forEach(polestart_geom.coordinates, function(coordinate, index){
+        //   polestart_geom.coordinates[index] = subOffset(coordinate);
+        // });
+        // if(line_geom != undefined || line_geom != null){
+        //   _.forEach(line_geom.coordinates, function(coordinate, index){
+        //     line_geom.coordinates[index] = subOffset(coordinate)
+        //   });
+        // }
+        // _.forEach(poleend_geom.coordinates, function(coordinate, index){
+        //   poleend_geom.coordinates[index] = subOffset(coordinate);
+        // });
 
         if(centerline_list.hasOwnProperty(`${polestart}_${poleend}`)){
           if(_.findIndex(centerline_list[`${polestart}_${poleend}`].cats,function(o){return o.id == cat_id}) == -1){
             centerline_list[`${polestart}_${poleend}`].cats.push({id: cat_id, geom: cat_geom});
           }
           if(_.findIndex(centerline_list[`${polestart}_${poleend}`].lines,function(o){return o.id == line_gid}) == -1){
-            centerline_list[`${polestart}_${poleend}`].lines.push({id: line_gid, geom: line_geom});
+            if(line_gid != undefined || line_gid != null){
+              centerline_list[`${polestart}_${poleend}`].lines.push({id: line_gid, geom: line_geom});
+            }
           }
         }else{
           centerline_list[`${polestart}_${poleend}`] = {
@@ -250,11 +259,11 @@ function getAllData(projectId, circuitId){
               id: cat_id,
               geom: cat_geom
             }],
-            lines:[{
-              id: line_gid,
-              geom: line_geom
-            }]
+            lines:[]
           };
+          if(line_gid != undefined || line_gid != null){
+            centerline_list[`${polestart}_${poleend}`].lines.push({ id: line_gid, geom: line_geom });
+          }
         }
       });
       resolve(centerline_list);
