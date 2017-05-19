@@ -187,15 +187,23 @@ var Clearance = Class([], {
 
     var unitDir = me.unitDir;
     if(index < 5 || index > 15){
+      var bottomToGround = vertices.bottom.vertice.z - P - start_groundZ - groundZ_gap*index;
       var topLeft = new THREE.Vector3(vertices.left.vertice.x + P*unitDir.x, vertices.left.vertice.y + P*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
       var topRight = new THREE.Vector3(vertices.right.vertice.x - P*unitDir.x, vertices.right.vertice.y - P*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
-      var bottomRight = new THREE.Vector3(vertices.right.vertice.x - P*unitDir.x, vertices.right.vertice.y - P*unitDir.y, vertices.bottom.vertice.z - P);
-      var bottomLeft = new THREE.Vector3(vertices.left.vertice.x + P*unitDir.x, vertices.left.vertice.y + P*unitDir.y, vertices.bottom.vertice.z - P);
+      if(bottomToGround > 3*Math.sqrt(2)){
+        bottomRight = new THREE.Vector3(vertices.right.vertice.x - P*unitDir.x, vertices.right.vertice.y - P*unitDir.y, vertices.bottom.vertice.z - P);
+        bottomLeft = new THREE.Vector3(vertices.left.vertice.x + P*unitDir.x, vertices.left.vertice.y + P*unitDir.y, vertices.bottom.vertice.z - P);
+      }else{
+        bottomRight = new THREE.Vector3(vertices.right.vertice.x - P*unitDir.x, vertices.right.vertice.y - P*unitDir.y, V>3*Math.sqrt(2)?V:3*Math.sqrt(2) + start_groundZ + groundZ_gap*index);
+        bottomLeft = new THREE.Vector3(vertices.left.vertice.x + P*unitDir.x, vertices.left.vertice.y + P*unitDir.y, V>3*Math.sqrt(2)?V:3*Math.sqrt(2) + start_groundZ + groundZ_gap*index);
+      }
       return [topLeft, topRight, bottomRight, bottomLeft];
     }else{
       var centerSpanIndexedPoint = me.centerSpan.getIndexedPoint(index);
       var rightDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - vertices.right.vertice.x + H*unitDir.x, 2) + Math.pow(centerSpanIndexedPoint.y - vertices.right.vertice.y + H*unitDir.y, 2));
       var leftDistance = Math.sqrt(Math.pow(centerSpanIndexedPoint.x - vertices.left.vertice.x - H*unitDir.x, 2) + Math.pow(centerSpanIndexedPoint.y - vertices.left.vertice.y - H*unitDir.y, 2));
+      var leftBottomToGround = vertices.leftBottom.vertice.z - V - start_groundZ - groundZ_gap*index;
+      var rightBottomToGround = vertices.rightBottom.vertice.z - V - start_groundZ - groundZ_gap*index;
       // right: x - y - s - rightDistance + h + 3*Math.sqrt(2) = 0
       // left: x + y + s + leftDistance - h - 3*Math.sqrt(2) = 0
       var topLeft =  new THREE.Vector3(
@@ -212,18 +220,39 @@ var Clearance = Class([], {
       var middleRight, bottomRight, middleLeft, bottomLeft;
       // check intersections
       if(rightDistance - S + 3*Math.sqrt(2) + start_groundZ + groundZ_gap*index > vertices.rightBottom.vertice.z - V){
-
         middleRight = new THREE.Vector3(
           vertices.right.vertice.x - H*unitDir.x,
           vertices.right.vertice.y - H*unitDir.y,
           Math.sqrt(2) * 3 + rightDistance - S + start_groundZ + groundZ_gap*index
         );
 
-        bottomRight = new THREE.Vector3(
-          vertices.right.vertice.x - H*unitDir.x + (rightDistance - S - (vertices.rightBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
-          vertices.right.vertice.y - H*unitDir.y + (rightDistance - S - (vertices.rightBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
-          vertices.rightBottom.vertice.z - V
-        );
+        if(rightBottomToGround >= 3*Math.sqrt(2)){
+          bottomRight = new THREE.Vector3(
+            vertices.right.vertice.x - H*unitDir.x + (rightDistance - S - (vertices.rightBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
+            vertices.right.vertice.y - H*unitDir.y + (rightDistance - S - (vertices.rightBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
+            vertices.rightBottom.vertice.z - V
+          );
+        }else{
+          if(rightBottomToGround < 3.5){
+            var verticalDistance = V > 3*Math.sqrt(2)?V:3*Math.sqrt(2);
+            bottomRight = new THREE.Vector3(
+              vertices.right.vertice.x - H*unitDir.x + (rightDistance - S - verticalDistance + 3*Math.sqrt(2))*unitDir.x,
+              vertices.right.vertice.y - H*unitDir.y + (rightDistance - S - verticalDistance + 3*Math.sqrt(2))*unitDir.y,
+              start_groundZ + groundZ_gap*index + verticalDistance
+            );
+          }else{
+            bottomRight = new THREE.Vector3(
+              vertices.rightBottom.vertice.x,
+              vertices.rightBottom.vertice.y,
+              vertices.rightBottom.vertice.z - V
+            );
+            middleRight = new THREE.Vector3(
+              vertices.rightBottom.vertice.x - H*unitDir.x,
+              vertices.rightBottom.vertice.y - H*unitDir.y,
+              vertices.rightBottom.vertice.z - V
+            );
+          }
+        }
       }else{
         middleRight = new THREE.Vector3(
           vertices.right.vertice.x - H*unitDir.x,
@@ -238,18 +267,39 @@ var Clearance = Class([], {
       }
 
       if(leftDistance - S + 3*Math.sqrt(2) + start_groundZ + groundZ_gap*index > vertices.leftBottom.vertice.z - V){
-
-        bottomLeft = new THREE.Vector3(
-          vertices.left.vertice.x + H*unitDir.x - (leftDistance - S - (vertices.leftBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
-          vertices.left.vertice.y + H*unitDir.y - (leftDistance - S - (vertices.leftBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
-          vertices.leftBottom.vertice.z - V
-        );
-
         middleLeft = new THREE.Vector3(
           vertices.left.vertice.x + H*unitDir.x,
           vertices.left.vertice.y + H*unitDir.y,
           Math.sqrt(2) * 3 + leftDistance - S + start_groundZ + groundZ_gap*index
         );
+        // check conductor's height > 3 + 3*Math.sqrt(2)
+        if(leftBottomToGround >= 3*Math.sqrt(2)){
+          bottomLeft = new THREE.Vector3(
+            vertices.left.vertice.x + H*unitDir.x - (leftDistance - S - (vertices.leftBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.x,
+            vertices.left.vertice.y + H*unitDir.y - (leftDistance - S - (vertices.leftBottom.vertice.z - V  - (start_groundZ + groundZ_gap*index)) + 3*Math.sqrt(2))*unitDir.y,
+            vertices.leftBottom.vertice.z - V
+          );
+        }else{
+          if(leftBottomToGround < 3.5){
+            var verticalDistance = V > 3.5?V:3.5;
+            bottomLeft = new THREE.Vector3(
+              vertices.left.vertice.x + H*unitDir.x - (leftDistance - S - verticalDistance + 3*Math.sqrt(2))*unitDir.x,
+              vertices.left.vertice.y + H*unitDir.y - (leftDistance - S - verticalDistance + 3*Math.sqrt(2))*unitDir.y,
+              start_groundZ + groundZ_gap*index + verticalDistance
+            );
+          }else{
+            bottomLeft = new THREE.Vector3(
+              vertices.leftBottom.vertice.x,
+              vertices.leftBottom.vertice.y ,
+              vertices.leftBottom.vertice.z - V
+            );
+            middleLeft = new THREE.Vector3(
+              vertices.leftBottom.vertice.x + H*unitDir.x,
+              vertices.leftBottom.vertice.y + H*unitDir.y,
+              vertices.leftBottom.vertice.z - V
+            );
+          }
+        }
       }else{
         bottomLeft = new THREE.Vector3(
           vertices.left.vertice.x + H*unitDir.x,
