@@ -37,11 +37,11 @@ var Clearance = Class([], {
       clearanceGeometry.vertices = clearanceGeometry.vertices.concat(spanVertices);
       if(i < 5 || i > 16){
         if(i == 0){
-          // clearanceGeometry.faces.push(new THREE.Face3(0,1,3));
-          // clearanceGeometry.faces.push(new THREE.Face3(1,2,3));
+          clearanceGeometry.faces.push(new THREE.Face3(0,1,3));
+          clearanceGeometry.faces.push(new THREE.Face3(1,2,3));
         }else if(i == 20){
-          // clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 1, clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 4));
-          // clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 3, clearanceGeometry.vertices.length - 4));
+          clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 1, clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 4));
+          clearanceGeometry.faces.push(new THREE.Face3(clearanceGeometry.vertices.length - 2, clearanceGeometry.vertices.length - 3, clearanceGeometry.vertices.length - 4));
           // connect to end
           var beginIndex =  5*4 + 10*6;
           var endIndex = clearanceGeometry.vertices.length - 1 - 3;
