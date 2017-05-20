@@ -22,8 +22,8 @@ function cleanCatenaries(catenaries){
   return sortedCatenaries;
 }
 
-function checkIntersectionColumn(){
-  var sql = `SELECT column_name FROM information_schema.columns WHERE table_name='${veg_clearance_table_name}' and column_name='intersection';`
+function checkIntersectionColumn(columnName){
+  var sql = `SELECT column_name FROM information_schema.columns WHERE table_name='${veg_clearance_table_name}' and column_name='${columnName}';`
   return db.query(sql).then(function(data){
     if(data.length != 0){
       return true;
@@ -35,7 +35,7 @@ function checkIntersectionColumn(){
 
 function genClearance(projectId, circuitId) {
   return getAllData(projectId, circuitId).then(function(data){
-    return checkIntersectionColumn().then(function(hasColumn){
+    return checkIntersectionColumn('intersection').then(function(hasColumn){
       if(!hasColumn){
         var sql = `ALTER TABLE ${veg_clearance_table} ADD intersection GEOMETRY(POINTZ, 28355);`;
         return db.query(sql).then(function(result){ return data; });
@@ -108,6 +108,17 @@ function genClearance(projectId, circuitId) {
         cats = cleanCatenaries(_.map(cats, function(cat){
           return cat.geom.coordinates;
         }));
+
+        // extend 2m for begin and end of catenary
+        _.forEach(cats, function(cat, index){
+          var beginToEnd = new THREE.Vector3(cat[2][0] - cat[0][0], cat[2][1] - cat[0][1], cat[2][2] - cat[0][2]);
+          beginToEnd = beginToEnd.normalize();
+          var endToBegin = new THREE.Vector3(cat[0][0] - cat[2][0], cat[0][1] - cat[2][1], cat[0][2] - cat[2][2]);
+          endToBegin = endToBegin.normalize();
+          cats[index][0] = [cats[index][0][0] + 2*endToBegin.x, cats[index][0][1] + 2*endToBegin.y, cats[index][0][2] + 2*endToBegin.z]
+          cats[index][2] = [cats[index][2][0] + 2*beginToEnd.x, cats[index][2][1] + 2*beginToEnd.y, cats[index][2][2] + 2*beginToEnd.z];
+        });
+
         var config = {
           catenaries: cats,
           centerSpan: centerSpan,
@@ -115,8 +126,10 @@ function genClearance(projectId, circuitId) {
             clientWidth: 0,
             clientHeight: 0
           },
-          clearanceConfig: clearanceConfig
+          clearanceConfig: clearanceConfig,
+          type: 'clearance'
         };
+
 
         // generate clearance
         var viewport3d = new Viewport3D(config);
@@ -126,8 +139,8 @@ function genClearance(projectId, circuitId) {
         var lines = data[attribute].lines;
         console.log(`Updating ${veg_clearance_table}`);
         _.forEach(lines, function(line){
-          var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates);
-          if(intersects.length === 1){
+          var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
+          if(intersects.length > 0){
             var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
             var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
             console.log(sql);
@@ -275,6 +288,151 @@ function getAllData(projectId, circuitId){
   });
 }
 
+function genBushFireRiskArea(projectId, circuitId){
+  return getAllData(projectId, circuitId).then(function(data){
+    return checkIntersectionColumn('risk_area_intersection').then(function(hasColumn){
+      if(!hasColumn){
+        var sql = `ALTER TABLE ${veg_clearance_table} ADD risk_area_intersection GEOMETRY(POINTZ, 28355);`;
+        return db.query(sql).then(function(result){ return data; });
+      }else{
+        return data;
+      }
+    });
+  }).then(function(data){
+    var promises = [];
+    // generate clearance for each center span
+    _.forEach(Object.keys(data), function(attribute){
+      if(data[attribute].lines.length > 0){
+        // generate center span
+        var cats = data[attribute].cats;
+        var beginAvg = [0,0,0];
+        var endAvg = [0,0,0];
+        _.forEach(cats, function(cat){
+          var begin = cat.geom.coordinates[0];
+          var end = cat.geom.coordinates[2];
+          var x;
+          if(begin[0] > end[0]){
+            x = end;
+            end = begin;
+            begin = x;
+          }
+          beginAvg[0] += begin[0];
+          beginAvg[1] += begin[1];
+          beginAvg[2] += begin[2];
+          endAvg[0] += end[0];
+          endAvg[1] += end[1];
+          endAvg[2] += end[2];
+        });
+        var n = cats.length;
+        beginAvg[0] /= n;
+        beginAvg[1] /= n;
+        beginAvg[2] /= n;
+        endAvg[0] /= n;
+        endAvg[1] /= n;
+        endAvg[2] /= n;
+        var centerSpan = [beginAvg, endAvg];
+        var voltage = 132;
+        var spanMetres = data[attribute].line_span_length;
+        var start_towerHeight = +data[attribute].polestart_height;
+        var end_towerHeight = +data[attribute].poleend_height;
+        var towerHeight_gap = (end_towerHeight - start_towerHeight)/20;
+
+        var start_groundZ = data[attribute].polestart_geom.coordinates[0][2];
+        var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
+        var groundZ_gap = (end_groundZ - start_groundZ)/20;
+        var clearanceConfig = {
+          start_towerHeight: start_towerHeight,
+          towerHeight_gap: towerHeight_gap,
+          start_groundZ: start_groundZ,
+          groundZ_gap: groundZ_gap
+        };
+        _.forEach(conductorConfig.type, function(type){
+          if(type.voltage == voltage){
+            clearanceConfig.P = type.p;
+            clearanceConfig.B = type.b;
+            _.forEach(type.span, function(span){
+              if((span.metersMore < spanMetres && span.metersLess && span.metersLess >= spanMetres) || (span.metersMore < spanMetres && !span.metersLess)){
+                clearanceConfig.V = span.v;
+                clearanceConfig.H = span.h;
+                clearanceConfig.S = span.s;
+                clearanceConfig['S*'] = span['s*'];
+              }
+            });
+          }
+        });
+        cats = cleanCatenaries(_.map(cats, function(cat){
+          return cat.geom.coordinates;
+        }));
+
+        // extend 2m for begin and end of catenary
+        _.forEach(cats, function(cat, index){
+          var beginToEnd = new THREE.Vector3(cat[2][0] - cat[0][0], cat[2][1] - cat[0][1], cat[2][2] - cat[0][2]);
+          beginToEnd = beginToEnd.normalize();
+          var endToBegin = new THREE.Vector3(cat[0][0] - cat[2][0], cat[0][1] - cat[2][1], cat[0][2] - cat[2][2]);
+          endToBegin = endToBegin.normalize();
+          cats[index][0] = [cats[index][0][0] + 2*endToBegin.x, cats[index][0][1] + 2*endToBegin.y, cats[index][0][2] + 2*endToBegin.z]
+          cats[index][2] = [cats[index][2][0] + 2*beginToEnd.x, cats[index][2][1] + 2*beginToEnd.y, cats[index][2][2] + 2*beginToEnd.z];
+        });
+
+        var config = {
+          catenaries: cats,
+          centerSpan: centerSpan,
+          domElement: {
+            clientWidth: 0,
+            clientHeight: 0
+          },
+          clearanceConfig: clearanceConfig,
+          type: 'bushFireRiskArea'
+        };
+
+        // generate bush fire risk area
+        var viewport3d = new Viewport3D(config);
+        var bushFireRiskArea = viewport3d.getBushFireRiskArea();
+
+
+        var lines = data[attribute].lines;
+        console.log(`Updating ${veg_clearance_table}`);
+        _.forEach(lines, function(line){
+          var intersects = bushFireRiskArea.getIntersectsWithVeg(line.geom.coordinates, line.id);
+          if(intersects.length === 1){
+            var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
+            var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
+            console.log(sql);
+            promises.push(db.query(sql));
+          }else{
+            var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
+            promises.push(db.query(sql));
+            console.log(sql);
+          }
+        });
+
+        // output OBJ
+        // var scene = viewport3d.scene.model;
+        // var exporter = new THREE.OBJExporter();
+        // var results = exporter.parse(scene);
+        // var fs = require('fs');
+        // fs.writeFile("./tmp.OBJ", results, function(err) {
+        //   if(err) {
+        //     return console.log(err);
+        //   }
+        //   console.log("The file was saved!");
+        // });
+      }
+    });
+
+    // update veg_clearance_table
+    if(promises.length > 0){
+      Promise.all(promises).then(function(){
+        console.log('Done');
+      }).catch(function(err){
+        console.log(err);
+      })
+    }else{
+      console.log('Done');
+    }
+  });
+}
 module.exports = {
-  genClearance: genClearance
+  genClearance: genClearance,
+  genBushFireRiskArea: genBushFireRiskArea
 };

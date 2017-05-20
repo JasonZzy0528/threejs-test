@@ -7,10 +7,7 @@ var Clearance = Class([], {
     var me = this;
     me.material = new THREE.MeshBasicMaterial({
       color: new THREE.Color('#33d7c4'),
-      wireframe: false,
-      transparent: true,
-      opacity: 0.5,
-      side: THREE.FrontSide
+      side: THREE.DoubleSide
     });
     _.extend(me, config);
   },
@@ -320,8 +317,8 @@ var Clearance = Class([], {
     return this.object;
   },
 
-  getIntersectsWithVeg: function(line){
-    var end = new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
+  getIntersectsWithVeg: function(line, id){
+    var end= new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
     var begin = new THREE.Vector3(line[1][0], line[1][1], line[1][2]);
     // disable raycaster far
     // var far = Math.sqrt(Math.pow(end.x - begin.x, 2) + Math.pow(end.y - begin.y, 2) + Math.pow(end.z - begin.z, 2));
@@ -336,9 +333,12 @@ var Clearance = Class([], {
         intersections.push(intersect.point);
       }
     });
+
     if(intersections.length > 0){
       // this.genIntersects(intersections);
-      this.generateRayLine(begin, end);
+      this.generateRayLine(begin, intersections[0], id);
+    }else{
+      this.generateRayLine(begin, end, id);
     }
     return intersections;
   },
@@ -354,13 +354,13 @@ var Clearance = Class([], {
     this.viewport3d.scene.model.add(intersects);
   },
 
-  generateRayLine: function(begin, end){
+  generateRayLine: function(begin, end, id){
     var lineGeometry = new THREE.Geometry();
     lineGeometry.vertices.push(begin);
     lineGeometry.vertices.push(end);
     var material = new THREE.LineBasicMaterial({color: new THREE.Color('#0003ff')});
     var line = new THREE.Line(lineGeometry, material);
-    line.name = 'line_' + Math.floor((Math.random() * 10) + 1).toString();
+    line.name = 'line_' + id;
     this.viewport3d.scene.model.add(line);
   }
 
