@@ -8,6 +8,7 @@ var db = pgp(dbConfig);
 var veg_clearance_table;
 var veg_clearance_table_name;
 var veg_clearance_table_has_intersect_column;
+var count = 0;
 
 function cleanCatenaries(catenaries){
   var sortedCatenaries = [];
@@ -47,134 +48,123 @@ function genClearance(projectId, circuitId) {
     var promises = [];
     // generate clearance for each center span
     _.forEach(Object.keys(data), function(attribute){
-      if(data[attribute].lines.length > 0){
-        // generate center span
-        var cats = data[attribute].cats;
-        var beginAvg = [0,0,0];
-        var endAvg = [0,0,0];
-        _.forEach(cats, function(cat){
-          var begin = cat.geom.coordinates[0];
-          var end = cat.geom.coordinates[2];
-          var x;
-          if(begin[0] > end[0]){
-            x = end;
-            end = begin;
-            begin = x;
-          }
-          beginAvg[0] += begin[0];
-          beginAvg[1] += begin[1];
-          beginAvg[2] += begin[2];
-          endAvg[0] += end[0];
-          endAvg[1] += end[1];
-          endAvg[2] += end[2];
-        });
-        var n = cats.length;
-        beginAvg[0] /= n;
-        beginAvg[1] /= n;
-        beginAvg[2] /= n;
-        endAvg[0] /= n;
-        endAvg[1] /= n;
-        endAvg[2] /= n;
-        var centerSpan = [beginAvg, endAvg];
-        var voltage = 132;
-        var spanMetres = data[attribute].line_span_length;
-        var start_towerHeight = +data[attribute].polestart_height;
-        var end_towerHeight = +data[attribute].poleend_height;
-        var towerHeight_gap = (end_towerHeight - start_towerHeight)/20;
+        if(data[attribute].lines.length > 0){
+          // generate center span
+          var cats = data[attribute].cats;
+          var beginAvg = [0,0,0];
+          var endAvg = [0,0,0];
+          _.forEach(cats, function(cat){
+            var begin = cat.geom.coordinates[0];
+            var end = cat.geom.coordinates[2];
+            var x;
+            if(begin[0] > end[0]){
+              x = end;
+              end = begin;
+              begin = x;
+            }
+            beginAvg[0] += begin[0];
+            beginAvg[1] += begin[1];
+            beginAvg[2] += begin[2];
+            endAvg[0] += end[0];
+            endAvg[1] += end[1];
+            endAvg[2] += end[2];
+          });
+          var n = cats.length;
+          beginAvg[0] /= n;
+          beginAvg[1] /= n;
+          beginAvg[2] /= n;
+          endAvg[0] /= n;
+          endAvg[1] /= n;
+          endAvg[2] /= n;
+          var centerSpan = [beginAvg, endAvg];
+          var voltage = 132;
+          var spanMetres = data[attribute].line_span_length;
+          var start_towerHeight = +data[attribute].polestart_height;
+          var end_towerHeight = +data[attribute].poleend_height;
+          var towerHeight_gap = (end_towerHeight - start_towerHeight)/20;
 
-        var start_groundZ = data[attribute].polestart_geom.coordinates[0][2];
-        var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
-        var groundZ_gap = (end_groundZ - start_groundZ)/20;
-        var clearanceConfig = {
-          start_towerHeight: start_towerHeight,
-          towerHeight_gap: towerHeight_gap,
-          start_groundZ: start_groundZ,
-          groundZ_gap: groundZ_gap
-        };
-        _.forEach(conductorConfig.type, function(type){
-          if(type.voltage == voltage){
-            clearanceConfig.P = type.p;
-            clearanceConfig.B = type.b;
-            _.forEach(type.span, function(span){
-              if((span.metersMore < spanMetres && span.metersLess && span.metersLess >= spanMetres) || (span.metersMore < spanMetres && !span.metersLess)){
-                clearanceConfig.V = span.v;
-                clearanceConfig.H = span.h;
-                clearanceConfig.S = span.s;
-                clearanceConfig['S*'] = span['s*'];
-              }
-            });
-          }
-        });
-        cats = cleanCatenaries(_.map(cats, function(cat){
-          return cat.geom.coordinates;
-        }));
+          var start_groundZ = data[attribute].polestart_geom.coordinates[0][2];
+          var end_groundZ = data[attribute].poleend_geom.coordinates[0][2];
+          var groundZ_gap = (end_groundZ - start_groundZ)/20;
+          var clearanceConfig = {
+            start_towerHeight: start_towerHeight,
+            towerHeight_gap: towerHeight_gap,
+            start_groundZ: start_groundZ,
+            groundZ_gap: groundZ_gap
+          };
+          _.forEach(conductorConfig.type, function(type){
+            if(type.voltage == voltage){
+              clearanceConfig.P = type.p;
+              clearanceConfig.B = type.b;
+              _.forEach(type.span, function(span){
+                if((span.metersMore < spanMetres && span.metersLess && span.metersLess >= spanMetres) || (span.metersMore < spanMetres && !span.metersLess)){
+                  clearanceConfig.V = span.v;
+                  clearanceConfig.H = span.h;
+                  clearanceConfig.S = span.s;
+                  clearanceConfig['S*'] = span['s*'];
+                }
+              });
+            }
+          });
+          cats = cleanCatenaries(_.map(cats, function(cat){
+            return cat.geom.coordinates;
+          }));
 
-        // extend 2m for begin and end of catenary
-        _.forEach(cats, function(cat, index){
-          var beginToEnd = new THREE.Vector3(cat[2][0] - cat[0][0], cat[2][1] - cat[0][1], cat[2][2] - cat[0][2]);
-          beginToEnd = beginToEnd.normalize();
-          var endToBegin = new THREE.Vector3(cat[0][0] - cat[2][0], cat[0][1] - cat[2][1], cat[0][2] - cat[2][2]);
-          endToBegin = endToBegin.normalize();
-          cats[index][0] = [cats[index][0][0] + 2*endToBegin.x, cats[index][0][1] + 2*endToBegin.y, cats[index][0][2] + 2*endToBegin.z]
-          cats[index][2] = [cats[index][2][0] + 2*beginToEnd.x, cats[index][2][1] + 2*beginToEnd.y, cats[index][2][2] + 2*beginToEnd.z];
-        });
-
-        var config = {
-          catenaries: cats,
-          centerSpan: centerSpan,
-          domElement: {
-            clientWidth: 0,
-            clientHeight: 0
-          },
-          clearanceConfig: clearanceConfig,
-          type: 'clearance'
-        };
+          var config = {
+            catenaries: cats,
+            centerSpan: centerSpan,
+            domElement: {
+              clientWidth: 0,
+              clientHeight: 0
+            },
+            clearanceConfig: clearanceConfig,
+            type: 'clearance'
+          };
 
 
-        // generate clearance
-        var viewport3d = new Viewport3D(config);
+          // generate clearance
+          var viewport3d = new Viewport3D(config);
 
-        var clearance = viewport3d.getClearance();
+          var clearance = viewport3d.getClearance();
 
-        var lines = data[attribute].lines;
-        console.log(`Updating ${veg_clearance_table}`);
-        _.forEach(lines, function(line){
-          var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
-          if(intersects.length > 0){
-            var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
-            var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
-            console.log(sql);
-            promises.push(db.query(sql));
-          }else{
-            var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-            promises.push(db.query(sql));
-            console.log(sql);
-          }
-        });
+          var lines = data[attribute].lines;
+          console.log(`Updating ${veg_clearance_table}`);
+          _.forEach(lines, function(line){
+            var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
+            if(intersects.length > 0){
+              var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
+              var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
+              console.log(sql);
+              promises.push(db.query(sql));
+            }else{
+              var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
+              console.log(sql);
+              promises.push(db.query(sql));
+            }
+          });
 
-        // output OBJ
-        // var scene = viewport3d.scene.model;
-        // var exporter = new THREE.OBJExporter();
-        // var results = exporter.parse(scene);
-        // var fs = require('fs');
-        // fs.writeFile("./tmp.OBJ", results, function(err) {
-        //   if(err) {
-        //     return console.log(err);
-        //   }
-        //   console.log("The file was saved!");
-        // });
-      }
+          // output OBJ
+          // var scene = viewport3d.scene.model;
+          // var exporter = new THREE.OBJExporter();
+          // var results = exporter.parse(scene);
+          // var fs = require('fs');
+          // fs.writeFile("./tmp.OBJ", results, function(err) {
+          //   if(err) {
+          //     return console.log(err);
+          //   }
+          //   console.log("The file was saved!");
+          // });
+        }
     });
-
     // update veg_clearance_table
     if(promises.length > 0){
       Promise.all(promises).then(function(){
-        console.log('Done');
+        console.log(' Clearance Done');
       }).catch(function(err){
         console.log(err);
       })
     }else{
-      console.log('Done');
+      console.log('Clearance Done');
     }
   });
 }
@@ -208,12 +198,11 @@ function genCenterline(data){
 }
 
 function subOffset(point){
-  var offset = [288947.3895096503, 6154893.460849883, 139.76762796527123];
+  var offset = [289236.43396549916,6156670.9094580505,87.21476105969055];
   return [point[0] - offset[0], point[1] - offset[1], point[2] - offset[2]]
 }
 
 function getAllData(projectId, circuitId){
-
   return new Promise(function(resolve, reject){
     veg_clearance_table = `public.veg_clearances_${projectId}`;
     veg_clearance_table_name = `veg_clearances_${projectId}`;
@@ -234,7 +223,7 @@ function getAllData(projectId, circuitId){
         var line_gid = record.line_gid;
         var line_span_length = record.cat_span_length;
 
-        // sub offset only for test
+        //sub offset only for test
         // _.forEach(cat_geom.coordinates, function(coordinate, index){
         //   cat_geom.coordinates[index] = subOffset(coordinate)
         // });
@@ -363,16 +352,6 @@ function genBushFireRiskArea(projectId, circuitId){
         cats = cleanCatenaries(_.map(cats, function(cat){
           return cat.geom.coordinates;
         }));
-
-        // extend 2m for begin and end of catenary
-        _.forEach(cats, function(cat, index){
-          var beginToEnd = new THREE.Vector3(cat[2][0] - cat[0][0], cat[2][1] - cat[0][1], cat[2][2] - cat[0][2]);
-          beginToEnd = beginToEnd.normalize();
-          var endToBegin = new THREE.Vector3(cat[0][0] - cat[2][0], cat[0][1] - cat[2][1], cat[0][2] - cat[2][2]);
-          endToBegin = endToBegin.normalize();
-          cats[index][0] = [cats[index][0][0] + 2*endToBegin.x, cats[index][0][1] + 2*endToBegin.y, cats[index][0][2] + 2*endToBegin.z]
-          cats[index][2] = [cats[index][2][0] + 2*beginToEnd.x, cats[index][2][1] + 2*beginToEnd.y, cats[index][2][2] + 2*beginToEnd.z];
-        });
 
         var config = {
           catenaries: cats,
