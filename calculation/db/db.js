@@ -8,7 +8,6 @@ var db = pgp(dbConfig);
 var veg_clearance_table;
 var veg_clearance_table_name;
 var veg_clearance_table_has_intersect_column;
-var count = 0;
 
 function cleanCatenaries(catenaries){
   var sortedCatenaries = [];
