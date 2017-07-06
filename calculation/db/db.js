@@ -110,6 +110,10 @@ function genClearance(projectId, circuitId) {
             return cat.geom.coordinates;
           }));
 
+          if (!clearanceConfig.V) { clearanceConfig.V = 0; }
+          if (!clearanceConfig.H) { clearanceConfig.H = 0; }
+          if (!clearanceConfig.S) { clearanceConfig.S = 0; }
+
           var config = {
             catenaries: cats,
             centerSpan: centerSpan,
