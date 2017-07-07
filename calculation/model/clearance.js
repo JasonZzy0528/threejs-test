@@ -102,6 +102,34 @@ var Clearance = Class([], {
 
     var position = {};
 
+        if(vertices.length == 1){
+          position = {
+            left: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            right: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            leftBottom: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            rightBottom: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            bottom: {
+              vertice: vertices[0],
+              distance: 0
+            }
+          }
+          return position;
+        }
+
+    var position = {};
+
     _.forEach(vertices, function(vertice, index){
       var verticeToCenterSpan = new THREE.Vector3(vertice.x - begin.x, vertice.y - begin.y, vertice.z - begin.z);
 
