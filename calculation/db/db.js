@@ -44,7 +44,6 @@ function genClearance(projectId, circuitId) {
       }
     });
   }).then(function(data){
-    console.log('data', _.size(data));
     var promises = [];
     // generate clearance for each center span
     _.forEach(Object.keys(data), function(attribute){

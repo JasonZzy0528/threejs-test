@@ -102,6 +102,34 @@ var Clearance = Class([], {
 
     var position = {};
 
+        if(vertices.length == 1){
+          position = {
+            left: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            right: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            leftBottom: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            rightBottom: {
+              vertice: vertices[0],
+              distance: 0
+            },
+            bottom: {
+              vertice: vertices[0],
+              distance: 0
+            }
+          }
+          return position;
+        }
+
+    var position = {};
+
     _.forEach(vertices, function(vertice, index){
       var verticeToCenterSpan = new THREE.Vector3(vertice.x - begin.x, vertice.y - begin.y, vertice.z - begin.z);
 
@@ -270,7 +298,7 @@ var Clearance = Class([], {
           middleRight = new THREE.Vector3(
             vertices.right.vertice.x,
             vertices.right.vertice.y,
-            vertices.rightBottom.vertice.z - V + Math.abs((vertice.right.vertice.x - vertice.rightBottom.vertice.x)/unitDir.x) + H
+            vertices.rightBottom.vertice.z - V + Math.abs((vertices.right.vertice.x - vertices.rightBottom.vertice.x)/unitDir.x) + H
           );
           bottomRight = new THREE.Vector3(
             vertices.rightBottom.vertice.x,
@@ -320,7 +348,7 @@ var Clearance = Class([], {
           middleLeft = new THREE.Vector3(
             vertices.left.vertice.x,
             vertices.left.vertice.y,
-            vertices.leftBottom.vertice.z - V + Math.abs((vertice.left.vertice.x - vertice.leftBottom.vertice.x)/unitDir.x) + H
+            vertices.leftBottom.vertice.z - V + Math.abs((vertices.left.vertice.x - vertices.leftBottom.vertice.x)/unitDir.x) + H
           );
           bottomLeft = new THREE.Vector3(
             vertices.leftBottom.vertice.x,
