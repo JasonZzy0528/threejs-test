@@ -44,6 +44,7 @@ function genClearance(projectId, circuitId) {
       }
     });
   }).then(function(data){
+    console.log('data', data);
     var promises = [];
     // generate clearance for each center span
     _.forEach(Object.keys(data), function(attribute){
@@ -109,6 +110,10 @@ function genClearance(projectId, circuitId) {
             return cat.geom.coordinates;
           }));
 
+          if (!clearanceConfig.V) { clearanceConfig.V = 0; }
+          if (!clearanceConfig.H) { clearanceConfig.H = 0; }
+          if (!clearanceConfig.S) { clearanceConfig.S = 0; }
+
           var config = {
             catenaries: cats,
             centerSpan: centerSpan,
@@ -136,6 +141,7 @@ function genClearance(projectId, circuitId) {
               console.log(sql);
               promises.push(db.query(sql));
             }else{
+              return;
               var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
               console.log(sql);
               promises.push(db.query(sql));
