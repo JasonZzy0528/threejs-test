@@ -1,6 +1,6 @@
 var express = require('express');
 var bodyParser = require('body-parser');
-var calculation = require('./calculation/calculation');
+var calculation = require('./calculation/index');
 
 var app = express();
 
