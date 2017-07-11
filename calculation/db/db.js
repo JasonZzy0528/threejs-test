@@ -162,13 +162,14 @@ function genClearance(projectId, circuitId) {
     });
     // update veg_clearance_table
     if(promises.length > 0){
-      Promise.all(promises).then(function(){
+      return Promise.all(promises).then(function(){
         console.log(' Clearance Done');
       }).catch(function(err){
         console.log(err);
       })
     }else{
       console.log('Clearance Done');
+      return;
     }
   });
 }

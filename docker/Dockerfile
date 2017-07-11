@@ -15,6 +15,8 @@ RUN apt-get update \
       libxi-dev \
       libglu1-mesa-dev \
       libglew-dev \
+      python-dev \
+      python-pip \
     && apt-get -y autoclean
 
 # nvm environment variables
@@ -47,5 +49,6 @@ RUN node -v
 RUN npm -v
 RUN python -v
 
+USER root
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
-# CMD ["npm install", "npm start"]
