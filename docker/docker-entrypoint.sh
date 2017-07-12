@@ -1,13 +1,10 @@
 #!/bin/bash
 set -e
 
-chmod 400 /root/.ssh/id_rsa
-ssh-keyscan github.com > "/root/.ssh/known_hosts"
-
 # Pull source from repo
 if [ ! -d "${INSTALL_DIR}/.git" ]; then
     echo "Cloning your repository...."
-    git clone -b docker git@github.com:JasonZzy0528/threejs-test.git ${INSTALL_DIR}
+    git clone -b dev https://github.com/JasonZzy0528/threejs-test.git ${INSTALL_DIR}
 else
     echo "Building and serving site..."
     cd ${INSTALL_DIR}
@@ -15,5 +12,15 @@ else
 fi
 
 cd ${INSTALL_DIR}
+
+echo '
+{
+  "user": "${USER}",
+  "database": "${DATABASE}",
+  "password": "${PASSWORD}",
+  "host": "${HOST}",
+  "port": "${PORT}"
+}' > ./calculation/db/dbConfig.json
+
 npm install
 npm start

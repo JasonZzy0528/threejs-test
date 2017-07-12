@@ -6,7 +6,7 @@ Class = jsface.Class;
 var CenterSpan = require('../model/center_span');
 var Catenary = require('../model/catenary');
 var Clearance = require('../model/clearance');
-
+var BushFireRiskArea = require('../model/bushFireArea');
 const Viewport3D = Class([FOUR.Viewport3D], {
 
   constructor: function(config){
@@ -31,16 +31,18 @@ const Viewport3D = Class([FOUR.Viewport3D], {
 
     me.setupCamera();
 
-
-
     me.backgroundColor = new THREE.Color('#efffff');
     me.renderer.setClearColor(me.backgroundColor);
 
     me.render();
-
     me.createCenterSpan();
     me.createCatenaries();
-    me.generateClearance();
+
+    if(me.type == 'clearance'){
+      me.generateClearance();
+    }else if(me.type == 'bushFireRiskArea'){
+      me.genBushFireArea();
+    }
   },
 
   createCenterSpan: function(){
@@ -79,12 +81,14 @@ const Viewport3D = Class([FOUR.Viewport3D], {
   generateClearance: function(){
     var me = this;
     var centerSpan = me.centerSpanObj;
-    var H = centerSpan.getH();
-    var S = centerSpan.getS();
-    var V = centerSpan.getV();
+    var H = me.clearanceConfig.H;
+    var S = me.clearanceConfig.S;
+    var V = me.clearanceConfig.V;
+    var P = me.clearanceConfig.P;
+    var B = me.clearanceConfig.B;
     var unitDir = centerSpan.getUnitVerticalNormal();
-    var towerHeight = centerSpan.getTowerHeight();
-    var groundZ = me.groundZ;
+    var start_towerHeight = me.clearanceConfig.start_towerHeight;
+    var towerHeight_gap = me.clearanceConfig.towerHeight_gap;
     var config = {
       centerSpan: centerSpan,
       catenaryObjArray: me.catenaryObjArray,
@@ -92,13 +96,54 @@ const Viewport3D = Class([FOUR.Viewport3D], {
       H: H,
       S: S,
       V: V,
-      towerHeight: towerHeight,
-      groundZ: groundZ,
+      P: P,
+      B: B,
+      start_towerHeight: start_towerHeight,
+      towerHeight_gap: towerHeight_gap,
+      start_groundZ: me.clearanceConfig.start_groundZ,
+      groundZ_gap: me.clearanceConfig.groundZ_gap,
       viewport3d: me
-    }
+    };
     var clearance = new Clearance(config).init();
     me.clearanceObj = clearance;
     me.scene.model.add(clearance.get3dObject());
+  },
+
+  genBushFireArea: function(){
+    var me = this;
+    var centerSpan = me.centerSpanObj;
+    var H = me.clearanceConfig.H;
+    var S = me.clearanceConfig.S;
+    var V = me.clearanceConfig.V;
+    var P = me.clearanceConfig.P;
+    var B = me.clearanceConfig.B;
+    var unitDir = centerSpan.getUnitVerticalNormal();
+    var start_towerHeight = me.clearanceConfig.start_towerHeight;
+    var towerHeight_gap = me.clearanceConfig.towerHeight_gap;
+    var config = {
+      centerSpan: centerSpan,
+      catenaryObjArray: me.catenaryObjArray,
+      unitDir: unitDir,
+      H: H,
+      S: S,
+      V: V,
+      P: P,
+      B: B,
+      start_towerHeight: start_towerHeight,
+      towerHeight_gap: towerHeight_gap,
+      start_groundZ: me.clearanceConfig.start_groundZ,
+      groundZ_gap: me.clearanceConfig.groundZ_gap,
+      viewport3d: me
+    };
+
+    var BushFireArea = new BushFireRiskArea(config).init();
+
+    me.bushFireAreaObj = BushFireArea;
+    me.scene.model.add(BushFireArea.get3dObject());
+  },
+
+  getBushFireRiskArea: function(){
+    return this.bushFireAreaObj;
   },
 
   getClearance: function(){
@@ -109,7 +154,7 @@ const Viewport3D = Class([FOUR.Viewport3D], {
     var me = this;
     var camera = new FOUR.TargetCamera(45, 1, 0.1, 10000);
     camera.name = 'camera';
-    camera.setPositionAndTarget(new THREE.Vector3(50, 50, 50), new THREE.Vector3());
+    camera.setPositionAndTarget(new THREE.Vector3(), new THREE.Vector3());
     me.setCamera(camera);
   }
 });

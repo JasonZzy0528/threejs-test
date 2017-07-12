@@ -11,4 +11,4 @@ try {
   throw err;
 }
 
-db.genClearance(projectId, circuitId);
+db.genBushFireRiskArea(projectId, circuitId);

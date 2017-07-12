@@ -2,4 +2,3 @@ node_modules
 bower_components
 postgis_sql
 calculation/db/dbConfig.json
-server.js

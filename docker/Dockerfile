@@ -15,15 +15,12 @@ RUN apt-get update \
 #      bzip2 \
 #      ssh \
       build-essential \
-RUN apt-get install -y --no-install-recommends libegl1-mesa-drivers
-RUN apt-get install -y --no-install-recommends libxi-dev
-RUN apt-get install -y --no-install-recommends libglu1-mesa-dev
-RUN apt-get install -y --no-install-recommends libglew-dev
-RUN apt-get install -y --no-install-recommends mesa-utils
-RUN apt-get -y autoclean
-
-RUN gcc --help
-RUN glewinfo
+      libxi-dev \
+      libglu1-mesa-dev \
+      libglew-dev \
+      python-dev \
+      python-pip \
+    && apt-get -y autoclean
 
 # nvm environment variables
 # ENV NVM_DIR /usr/local/nvm
@@ -51,6 +48,10 @@ RUN glewinfo
 # ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 # confirm installation
-# RUN node -v && npm -v && python -V &&
+RUN node -v
+RUN npm -v
+RUN python -V
 
-# ENTRYPOINT ["/docker-entrypoint.sh"]
+USER root
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
