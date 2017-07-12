@@ -47,7 +47,7 @@ ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 # confirm installation
 RUN node -v
 RUN npm -v
-RUN python -v
+RUN python -V
 
 USER root
 
