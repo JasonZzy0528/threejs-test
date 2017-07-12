@@ -24,8 +24,8 @@ For generate server-side clearance calculation:
 }
 ```
 - To run server-side calculation:
-  - args:  "node jsfile pole_ids_array catenaries_start_and_end_ids point_to_get_intersection"
-  - args example :
+  - command line:  "node jsfile pole_ids_array catenaries_start_and_end_ids point_to_get_intersection"
+  - command line example :
 ```
 node ./calculation/calculation.js "[116449646802843, 102443810998013]" "[102443810998013, 116449646802843]" "[0,0,0]"
 ```
