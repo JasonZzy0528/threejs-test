@@ -19,7 +19,7 @@ echo '
   "database": "${DATABASE}",
   "password": "${PASSWORD}",
   "host": "${HOST}",
-  "port": "${PORT}"
+  "port": ${PORT}
 }' > ./calculation/db/dbConfig.json
 
 npm install
