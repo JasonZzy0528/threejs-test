@@ -22,6 +22,7 @@ RUN apt-get update \
       python-pip \
       mesa-utils \
       xserver-xorg-video-all \
+      xvfb \
     && apt-get -y autoclean
 
 # nvm environment variables
