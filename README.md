@@ -3,7 +3,8 @@
 ## Table Of Contents
 - [Installation](#installation)
 - [Build & Develoment](#build--development)
-- [Deployment](#deployment)
+- [Dockerize](#dockerize)
+- [API](#api)
 
 ## Installation
 `npm install`
@@ -33,4 +34,24 @@ $ node calculation.js 154543648056821 154544010327544
 $ node bush_calculation.js 154543648056821 154544010327544
 ```
 
-## Deployment
+## Dockerize
+```
+$ cd docker
+$ docker build -t calculation .
+$ docker run -i -t -e USER='user' -e DATABASE='database' -e PASSWORD='password' -e HOST='localhost' -e PORT='5432' -p 3000:3000 calculation
+```
+
+## API
+- Calculate intersection with clearance: ```/api/clearance```
+  - POST method
+  - Body: {
+    projectId: 1xxxx,
+    circuitId: 1xxxx
+  }
+- Calculate intersection with clearance: ```/api/bush```
+  - POST method
+  - Body: {
+    projectId: 1xxxx,
+    circuitId: 1xxxx
+  }
+

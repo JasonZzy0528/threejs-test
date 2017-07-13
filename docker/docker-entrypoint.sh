@@ -23,5 +23,4 @@ echo "
 }" > ${INSTALL_DIR}/calculation/db/dbConfig.json
 
 npm install
-#npm start
 xvfb-run -s "-ac -screen 0 1280x1024x24" npm start
