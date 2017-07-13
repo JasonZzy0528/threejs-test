@@ -110,8 +110,8 @@ function genClearance(projectId, circuitId) {
             return cat.geom.coordinates;
           }));
 
-          if (!clearanceConfig.V) { clearanceConfig.V = 0; }
-          if (!clearanceConfig.H) { clearanceConfig.H = 0; }
+          if (!clearanceConfig.V) { clearanceConfig.V = 3; }
+          if (!clearanceConfig.H) { clearanceConfig.H = 3; }
           if (!clearanceConfig.S) { clearanceConfig.S = 0; }
 
           var config = {
@@ -125,29 +125,43 @@ function genClearance(projectId, circuitId) {
             type: 'clearance'
           };
 
-
           // generate clearance
-          var viewport3d = new Viewport3D(config);
+
+          var viewport3d
+          try {
+            viewport3d = new Viewport3D(config);
+          } catch (e) {
+            // pass
+            //console.log('failed generate clerance', config);
+            return;
+          }
 
           var clearance = viewport3d.getClearance();
 
           var lines = data[attribute].lines;
+          var rowCount = 0;
           console.log(`Updating ${veg_clearance_table}`);
           _.forEach(lines, function(line){
-            var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
+            var intersects = []
+            try {
+              intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
+            } catch (e) {
+              // pass
+            }
             if(intersects.length > 0){
+              rowCount++;
               var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
               var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
-              console.log(sql);
+              // console.log(sql);
               promises.push(db.query(sql));
             }else{
               return;
               var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-              console.log(sql);
+              // console.log(sql);
               promises.push(db.query(sql));
             }
           });
-
+          console.log('rowCount', rowCount)
           // output OBJ
           // var scene = viewport3d.scene.model;
           // var exporter = new THREE.OBJExporter();
