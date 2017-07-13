@@ -7,7 +7,6 @@ var TWEEN = require('../../tween.js/src/Tween');
 
 var FOUR = FOUR || {};
 var gl = require("gl")(10,10);
-console.log(gl);
 
 /**
  * Cursor styles.

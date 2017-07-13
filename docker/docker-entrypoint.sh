@@ -20,7 +20,7 @@ echo "
   \"password\": \"${PASSWORD}\",
   \"host\": \"${HOST}\",
   \"port\": ${PORT}
-}" > ./calculation/db/dbConfig.json
+}" > ${INSTALL_DIR}/calculation/db/dbConfig.json
 
 npm install
 npm start

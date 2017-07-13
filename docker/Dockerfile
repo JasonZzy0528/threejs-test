@@ -1,5 +1,6 @@
 # set the base image to Ubuntu
-FROM nginx:1.10
+#FROM nginx:1.10
+FROM ubuntu:latest
 
 ENV DEBIAN_FRONTEND noninteractive
 # replace shell with bash so we can source files
