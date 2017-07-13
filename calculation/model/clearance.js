@@ -296,8 +296,8 @@ var Clearance = Class([], {
           }
         }else{
           middleRight = new THREE.Vector3(
-            vertices.right.vertice.x,
-            vertices.right.vertice.y,
+            vertices.right.vertice.x - H*unitDir.x,
+            vertices.right.vertice.y - H*unitDir.y,
             vertices.rightBottom.vertice.z - V + Math.abs((vertices.right.vertice.x - vertices.rightBottom.vertice.x)/unitDir.x) + H
           );
           bottomRight = new THREE.Vector3(
@@ -346,8 +346,8 @@ var Clearance = Class([], {
           }
         }else{
           middleLeft = new THREE.Vector3(
-            vertices.left.vertice.x,
-            vertices.left.vertice.y,
+            vertices.left.vertice.x + H*unitDir.x,
+            vertices.left.vertice.y + H*unitDir.y,
             vertices.leftBottom.vertice.z - V + Math.abs((vertices.left.vertice.x - vertices.leftBottom.vertice.x)/unitDir.x) + H
           );
           bottomLeft = new THREE.Vector3(
