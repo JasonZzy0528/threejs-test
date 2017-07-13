@@ -13,14 +13,14 @@ fi
 
 cd ${INSTALL_DIR}
 
-echo '
+echo "
 {
-  "user": "${USER}",
-  "database": "${DATABASE}",
-  "password": "${PASSWORD}",
-  "host": "${HOST}",
-  "port": "${PORT}"
-}' > ./calculation/db/dbConfig.json
+  \"user\": \"${USER}\",
+  \"database\": \"${DATABASE}\",
+  \"password\": \"${PASSWORD}\",
+  \"host\": \"${HOST}\",
+  \"port\": ${PORT}
+}" > ${INSTALL_DIR}/calculation/db/dbConfig.json
 
 npm install
-npm start
+xvfb-run -s "-ac -screen 0 1280x1024x24" npm start
