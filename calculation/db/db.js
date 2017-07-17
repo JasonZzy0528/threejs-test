@@ -417,7 +417,44 @@ function genBushFireRiskArea(projectId, circuitId){
     }
   });
 }
+
+function preprocessReport(schema, projectId, circuitId){
+  return new Promise(function(resolve, reject){
+    var sql = 'SELECT * FROM cb_report_preprocess(${schema}, ${projectId}, ${circuitId})';
+    var params = {
+      schema: schema,
+      projectId: parseInt(projectId),
+      circuitId: parseInt(circuitId)
+    }
+    return db.query(sql, params).then(function(data){
+      resolve(data);
+    })
+    .catch(function(error){
+      reject(error);
+    });
+  });
+}
+
+function postprocessReport(schema, projectId, circuitId){
+  return new Promise(function(resolve, reject){
+    var sql = 'SELECT * FROM cb_report_postprocess(${schema}, ${projectId}, ${circuitId})';
+    var params = {
+      schema: schema,
+      projectId: parseInt(projectId),
+      circuitId: parseInt(circuitId)
+    }
+    return db.query(sql, params).then(function(data){
+      resolve(data);
+    })
+    .catch(function(error){
+      reject(error);
+    });
+  });
+}
+
 module.exports = {
   genClearance: genClearance,
-  genBushFireRiskArea: genBushFireRiskArea
+  genBushFireRiskArea: genBushFireRiskArea,
+  preprocessReport: preprocessReport,
+  postprocessReport: postprocessReport
 };

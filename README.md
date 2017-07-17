@@ -36,9 +36,7 @@ $ node bush_calculation.js 154543648056821 154544010327544
 
 ## Dockerize
 ```
-$ cd docker
-$ docker build -t calculation .
-$ docker run -i -t -e USER='user' -e DATABASE='database' -e PASSWORD='password' -e HOST='localhost' -e PORT='5432' -p 3000:3000 calculation
+$ docker run -i -t -e USER='user' -e DATABASE='database' -e PASSWORD='password' -e HOST='localhost' -e PORT='5432' -p 3000:3000 imageName
 ```
 
 ## API
@@ -48,9 +46,24 @@ $ docker run -i -t -e USER='user' -e DATABASE='database' -e PASSWORD='password' 
     projectId: 1xxxx,
     circuitId: 1xxxx
   }
-- Calculate intersection with clearance: ```/api/bush```
+- Calculate intersection with bush fire zone: ```/api/bush```
   - POST method
   - Body: {
+    projectId: 1xxxx,
+    circuitId: 1xxxx
+  }
+
+- Report preprocess: ```/api/report_preprocess```
+  - POST method
+  - Body: {
+    schemaName: 'public',
+    projectId: 1xxxx,
+    circuitId: 1xxxx
+  }
+- Report postprocess: ```/api/report_postprocess```
+  - POST method
+  - Body: {
+    schemaName: 'public',
     projectId: 1xxxx,
     circuitId: 1xxxx
   }
