@@ -40,7 +40,18 @@ $ docker run -i -t -e USER='user' -e DATABASE='database' -e PASSWORD='password' 
 ```
 
 ## API
-- Calculate intersection with clearance: ```/api/clearance```
+- Report postprocess: ```/api/genReport```
+  - POST method
+  - Body:
+  ```
+  {
+    schemaName: 'public',
+    projectId: 1xxxx,
+    circuitId: 1xxxx
+  }
+  ```
+
+<!-- - Calculate intersection with clearance: ```/api/clearance```
   - POST method
   - Body: {
     projectId: 1xxxx,
@@ -66,5 +77,5 @@ $ docker run -i -t -e USER='user' -e DATABASE='database' -e PASSWORD='password' 
     schemaName: 'public',
     projectId: 1xxxx,
     circuitId: 1xxxx
-  }
+  } -->
 
