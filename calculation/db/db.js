@@ -8,7 +8,7 @@ var db = pgp(dbConfig);
 var veg_clearance_table;
 var veg_clearance_table_name;
 var veg_clearance_table_has_intersect_column;
-console.log(dbConfig);
+var SRID;
 
 function cleanCatenaries(catenaries){
   var sortedCatenaries = [];
@@ -38,7 +38,7 @@ function genClearance(projectId, circuitId) {
   return getAllData(projectId, circuitId).then(function(data){
     return checkIntersectionColumn('intersection').then(function(hasColumn){
       if(!hasColumn){
-        var sql = `ALTER TABLE ${veg_clearance_table} ADD intersection GEOMETRY(POINTZ, 28355);`;
+        var sql = `SELECT AddGeometryColumn('public', 'veg_clearances_${projectId}', 'intersection', cb_project_srid(${projectId}), 'POINT', 3)`;
         return db.query(sql).then(function(result){ return data; });
       }else{
         return data;
@@ -137,14 +137,14 @@ function genClearance(projectId, circuitId) {
             var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
             if(intersects.length > 0){
               var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
-              var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
+              var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
               console.log(sql);
               promises.push(db.query(sql));
             }else{
               return;
-              var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-              console.log(sql);
-              promises.push(db.query(sql));
+              // var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
+              // console.log(sql);
+              // promises.push(db.query(sql));
             }
           });
 
@@ -287,7 +287,16 @@ function genBushFireRiskArea(projectId, circuitId){
   return getAllData(projectId, circuitId).then(function(data){
     return checkIntersectionColumn('risk_area_intersection').then(function(hasColumn){
       if(!hasColumn){
-        var sql = `ALTER TABLE ${veg_clearance_table} ADD risk_area_intersection GEOMETRY(POINTZ, 28355);`;
+        // var sql = `ALTER TABLE ${veg_clearance_table} ADD risk_area_intersection GEOMETRY(POINTZ, 28354);`;
+        var sql = `ALTER Table ${veg_clearance_table}
+                    ADD COLUMN risk_area_h NUMERIC,
+                    ADD COLUMN risk_area_s NUMERIC,
+                    ADD COLUMN risk_area_p NUMERIC,
+                    ADD COLUMN risk_area_b NUMERIC,
+                    ADD COLUMN risk_area_v NUMERIC,
+                    ADD COLUMN risk_area_d2 NUMERIC;
+                    SELECT AddGeometryColumn('public', 'veg_clearances_${projectId}', 'risk_area_intersection', cb_project_srid(${projectId}), 'POINT', 3);
+                    `
         return db.query(sql).then(function(result){ return data; });
       }else{
         return data;
@@ -381,13 +390,14 @@ function genBushFireRiskArea(projectId, circuitId){
           var intersects = bushFireRiskArea.getIntersectsWithVeg(line.geom.coordinates, line.id);
           if(intersects.length === 1){
             var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
-            var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = ST_GeomFromText('${point}', 28355), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
+            var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_p = ${clearanceConfig.P}, risk_area_b = ${clearanceConfig.B}, risk_area_v = ${clearanceConfig.V}, risk_area_h = ${clearanceConfig.H}, risk_area_s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
             console.log(sql);
-            promises.push(db.query(sql));
+            promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
           }else{
-            var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-            promises.push(db.query(sql));
-            console.log(sql);
+            return;
+            // var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
+            // promises.push(db.query(sql));
+            // console.log(sql);
           }
         });
 
