@@ -23,7 +23,7 @@ var Clearance = Class([], {
     var catenaryObjArray = me.catenaryObjArray;
 
     var clearanceGeometry = new THREE.Geometry();
-
+    var allVertices = [];
     for(var i = 0; i < 21; i++){
       var vertices = [];
       _.forEach(catenaryObjArray,function(catenary){
@@ -31,6 +31,7 @@ var Clearance = Class([], {
       });
       var position = me.detectPosition(vertices, beginVerticeOnCenterCatenary, endVerticeOnCenterCatenary);
       var spanVertices = me.getSpanVertices(i, position);
+      allVertices = allVertices.concat(spanVertices);
       clearanceGeometry.vertices = clearanceGeometry.vertices.concat(spanVertices);
       if(i < 5 || i > 16){
         if(i == 0){
@@ -84,6 +85,7 @@ var Clearance = Class([], {
     }
     clearanceGeometry.computeFaceNormals();
     clearanceGeometry.computeVertexNormals();
+    me.allVertices = allVertices;
 
     var clearance = new THREE.Mesh(clearanceGeometry, me.material);
     clearance.name = 'clearance';
@@ -407,6 +409,29 @@ var Clearance = Class([], {
     var line = new THREE.Line(lineGeometry, material);
     line.name = 'line_' + id;
     this.viewport3d.scene.model.add(line);
+  },
+
+  getClosestIntersect: function(line, id){
+    var me = this;
+    var vegPoint = new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
+    var closestIntersection = {};
+    _.forEach(me.allVertices, function(vertice){
+      var distance = vegPoint.distanceTo(vertice);
+      if(closestIntersection.distance){
+        if(distance < closestIntersection.distance){
+          closestIntersection = {
+            distance: distance,
+            intersect: vertice
+          }
+        }
+      }else{
+        closestIntersection = {
+          distance: distance,
+          intersect: vertice
+        }
+      }
+    });
+    return closestIntersection;
   }
 
 });

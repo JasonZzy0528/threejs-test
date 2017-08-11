@@ -20,6 +20,7 @@ var BushFireArea = Class([Clearance], {
     var catenaryObjArray = me.catenaryObjArray;
 
     var riskAreaGeometry = new THREE.Geometry();
+    var allVertices = [];
     for(var i = 0; i < 21; i++){
       var vertices = [];
       _.forEach(catenaryObjArray,function(catenary){
@@ -27,6 +28,7 @@ var BushFireArea = Class([Clearance], {
       });
       var position = me.detectPosition(vertices, beginVerticeOnCenterCatenary, endVerticeOnCenterCatenary, unitDir);
       var spanVertices = me.getSpanVertices(i, position);
+      allVertices = allVertices.concat(spanVertices);
       riskAreaGeometry.vertices = riskAreaGeometry.vertices.concat(spanVertices);
       if(i == 0){
         riskAreaGeometry.faces.push(new THREE.Face3(3,2,0));
@@ -51,6 +53,7 @@ var BushFireArea = Class([Clearance], {
 
     riskAreaGeometry.computeFaceNormals();
     riskAreaGeometry.computeVertexNormals();
+    me.allVertices = allVertices;
 
     var riskArea = new THREE.Mesh(riskAreaGeometry, me.material);
     riskArea.name = 'bushFireRistArea';

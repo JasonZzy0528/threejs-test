@@ -135,6 +135,7 @@ function genClearance(projectId, circuitId) {
           console.log(`Updating ${veg_clearance_table}`);
           _.forEach(lines, function(line){
             var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
+            var closestIntersect = clearance.getClosestIntersect(line.geom.coordinates, line.id);
             if(intersects.length > 0){
               var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
               var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
@@ -142,9 +143,13 @@ function genClearance(projectId, circuitId) {
               promises.push(db.query(sql));
             }else{
               return;
-              // var sql = `UPDATE ${veg_clearance_table} SET intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-              // console.log(sql);
-              // promises.push(db.query(sql));
+            }
+            if(closestIntersect.intersect){
+              var point = `POINTZ(${closestIntersect.intersect.x} ${closestIntersect.intersect.y} ${closestIntersect.intersect.z})`;
+              var distance = closestIntersect.distance;
+              var sql = `UPDATE ${veg_clearance_table} SET clearance_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), clearance_closest_distance=${distance} WHERE gid = ${line.id};`;
+              console.log(sql);
+              promises.push(db.query(sql));
             }
           });
 
@@ -388,6 +393,7 @@ function genBushFireRiskArea(projectId, circuitId){
         console.log(`Updating ${veg_clearance_table}`);
         _.forEach(lines, function(line){
           var intersects = bushFireRiskArea.getIntersectsWithVeg(line.geom.coordinates, line.id);
+          var closestIntersect = bushFireRiskArea.getClosestIntersect(line.geom.coordinates, line.id);
           if(intersects.length === 1){
             var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
             var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_p = ${clearanceConfig.P}, risk_area_b = ${clearanceConfig.B}, risk_area_v = ${clearanceConfig.V}, risk_area_h = ${clearanceConfig.H}, risk_area_s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
@@ -395,9 +401,13 @@ function genBushFireRiskArea(projectId, circuitId){
             promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
           }else{
             return;
-            // var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = NULL, p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id}`;
-            // promises.push(db.query(sql));
-            // console.log(sql);
+          }
+          if(closestIntersect.intersect){
+            var point = `POINTZ(${closestIntersect.intersect.x} ${closestIntersect.intersect.y} ${closestIntersect.intersect.z})`;
+            var distance = closestIntersect.distance;
+            var sql = `UPDATE ${veg_clearance_table} SET risk_area_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_closest_distance=${distance} WHERE gid = ${line.id};`;
+            console.log(sql);
+            promises.push(db.query(sql));
           }
         });
 
