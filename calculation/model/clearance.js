@@ -432,6 +432,86 @@ var Clearance = Class([], {
       }
     });
     return closestIntersection;
+  },
+
+  getClosestIntersectByRaycaster: function(line, id){
+    var me = this;
+    var vertice = new THREE.Vector3(line[0][0], line[0][1], line[0][2]);
+    var unitDir = me.unitDir;
+    var begin =  me.centerSpan.getBegin();
+    var end =  me.centerSpan.getEnd();
+
+    var verticeToCenterSpanBegin = new THREE.Vector3(vertice.x - begin.x, vertice.y - begin.y, vertice.z - begin.z);
+
+    var verticeToCenterSpanEnd = new THREE.Vector3(vertice.x - end.x, vertice.y - end.y, vertice.z - end.z);
+
+    var angle3d = unitDir.angleTo(verticeToCenterSpanBegin);
+    var distanceA = Math.sqrt(Math.pow(end.x - begin.x, 2) + Math.pow(end.y - begin.y, 2));
+    var distanceB = Math.sqrt(Math.pow(vertice.x - begin.x, 2) + Math.pow(vertice.y - begin.y, 2));
+    var distanceC = Math.sqrt(Math.pow(vertice.x - end.x, 2) + Math.pow(vertice.y - end.y, 2));
+    var angle =  Math.acos((Math.pow(distanceA,2) + Math.pow(distanceB, 2) - Math.pow(distanceC, 2))/(2*distanceA*distanceB));
+    var angle2 = Math.acos((Math.pow(distanceA,2) + Math.pow(distanceC, 2) - Math.pow(distanceB, 2))/(2*distanceA*distanceC));
+    var distance = distanceB;
+
+    var rotateAxis = new THREE.Vector3(0,0,0);
+    if(angle3d <= .5*Math.PI){
+      rotateAxis = rotateAxis.crossVectors(unitDir,new THREE.Vector3(0,0,1));
+    }else{
+      rotateAxis = rotateAxis.crossVectors(new THREE.Vector3(-unitDir.x,-unitDir.y,-unitDir.z), new THREE.Vector3(0,0,1));
+    }
+
+    if(angle <= 0.5*Math.PI && angle2 <= 0.5*Math.PI){
+      // between begin plane and end plane
+
+      var vectors = [];
+
+      for(i=0;i<180;i++){
+        var quaternion = new THREE.Quaternion();
+        var vector = new THREE.Vector3(0,0,1);
+        var angle = Math.PI / 180 * i;
+        var axis = rotateAxis.normalize();
+        quaternion.setFromAxisAngle( rotateAxis, angle );
+        vector.applyQuaternion( quaternion );
+        vector = vector.normalize();
+        vectors.push(vector);
+      }
+      vectors.push(new THREE.Vector3(0,0,-1));
+
+      var closest = {};
+      _.forEach(vectors, function(vector){
+        var raycaster = new THREE.Raycaster(vertice, vector);
+        var object = me.object;
+        var intersects = raycaster.intersectObject(object, true);
+        var intersections = [];
+        for(i=0;i<intersects.length;i++){
+          var intersect = intersects[i];
+          if(intersect.object.name == 'clearance'){
+            if(closest.distance != undefined && intersect.distance < closest.distance){
+              closest = {
+                distance: intersect.distance,
+                intersect: intersect.point
+              };
+            }else if(closest.distance == undefined){
+              closest = {
+                distance: intersect.distance,
+                intersect: intersect.point
+              };
+            }
+            break;
+          }
+        }
+      });
+      return closest;
+    }else if(angle < 0.5*Math.PI && angle2 > 0.5*Math.PI){
+      // front of begin plane
+      return null;
+
+    }else{
+      // back of end plane
+      return null;
+    }
+
+
   }
 
 });

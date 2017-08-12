@@ -135,21 +135,27 @@ function genClearance(projectId, circuitId) {
           console.log(`Updating ${veg_clearance_table}`);
           _.forEach(lines, function(line){
             var intersects = clearance.getIntersectsWithVeg(line.geom.coordinates, line.id);
+
+            // use vertices to get closest distance
             var closestIntersect = clearance.getClosestIntersect(line.geom.coordinates, line.id);
+
+            // raycaster to get closest distance
+            // var closestIntersect = clearance.getClosestIntersectByRaycaster(line.geom.coordinates, line.id);
+
             if(intersects.length > 0){
               var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
               var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
               console.log(sql);
-              promises.push(db.query(sql));
+              promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
             }else{
               return;
             }
-            if(closestIntersect.intersect){
+            if(closestIntersect != null){
               var point = `POINTZ(${closestIntersect.intersect.x} ${closestIntersect.intersect.y} ${closestIntersect.intersect.z})`;
               var distance = closestIntersect.distance;
               var sql = `UPDATE ${veg_clearance_table} SET clearance_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), clearance_closest_distance=${distance} WHERE gid = ${line.id};`;
               console.log(sql);
-              promises.push(db.query(sql));
+              promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
             }
           });
 
@@ -407,7 +413,7 @@ function genBushFireRiskArea(projectId, circuitId){
             var distance = closestIntersect.distance;
             var sql = `UPDATE ${veg_clearance_table} SET risk_area_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_closest_distance=${distance} WHERE gid = ${line.id};`;
             console.log(sql);
-            promises.push(db.query(sql));
+            promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
           }
         });
 
