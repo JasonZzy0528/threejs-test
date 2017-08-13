@@ -127,9 +127,18 @@ function genClearance(projectId, circuitId) {
 
 
           // generate clearance
-          var viewport3d = new Viewport3D(config);
 
-          var clearance = viewport3d.getClearance();
+          var viewport3d, clearance;
+          try {
+            viewport3d = new Viewport3D(config);
+            clearance = viewport3d.getClearance();
+          } catch (e) {
+            console.log('Failed to generate model');
+            return;
+          }
+          // var viewport3d = new Viewport3D(config);
+          //
+          // var clearance = viewport3d.getClearance();
 
           var lines = data[attribute].lines;
           console.log(`Updating ${veg_clearance_table}`);
@@ -391,8 +400,18 @@ function genBushFireRiskArea(projectId, circuitId){
         };
 
         // generate bush fire risk area
-        var viewport3d = new Viewport3D(config);
-        var bushFireRiskArea = viewport3d.getBushFireRiskArea();
+
+        var viewport3d, bushFireRiskArea;
+        try {
+          viewport3d = new Viewport3D(config);
+          bushFireRiskArea = viewport3d.getBushFireRiskArea();
+        } catch (e) {
+          console.log('Failed to generate model');
+          return;
+        }
+
+        // var viewport3d = new Viewport3D(config);
+        // var bushFireRiskArea = viewport3d.getBushFireRiskArea();
 
 
         var lines = data[attribute].lines;

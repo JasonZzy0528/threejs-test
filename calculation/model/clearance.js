@@ -141,7 +141,7 @@ var Clearance = Class([], {
       var distanceC = Math.sqrt(Math.pow(vertice.x - end.x, 2) + Math.pow(vertice.y - end.y, 2));
       var angle =  Math.acos((Math.pow(distanceA,2) + Math.pow(distanceB, 2) - Math.pow(distanceC, 2))/(2*distanceA*distanceB));
       var distance = distanceB;
-      if(angle3d <= .5*Math.PI && angle >= 0){
+      if(angle3d <= .5*Math.PI && angle > 0){
         if(position.left == undefined){
           position.left = {
             vertice: vertice,
