@@ -37,12 +37,6 @@ const Viewport3D = Class([FOUR.Viewport3D], {
     me.render();
     me.createCenterSpan();
     me.createCatenaries();
-
-    if(me.type == 'clearance'){
-      me.generateClearance();
-    }else if(me.type == 'bushFireRiskArea'){
-      me.genBushFireArea();
-    }
   },
 
   createCenterSpan: function(){
@@ -136,10 +130,12 @@ const Viewport3D = Class([FOUR.Viewport3D], {
       viewport3d: me
     };
 
-    var BushFireArea = new BushFireRiskArea(config).init();
-
-    me.bushFireAreaObj = BushFireArea;
-    me.scene.model.add(BushFireArea.get3dObject());
+    var BushFireArea = new BushFireRiskArea(config);
+    return BushFireArea.init().then(function(obj){
+      me.bushFireAreaObj = obj;
+      me.scene.model.add(BushFireArea.get3dObject());
+      return me.bushFireAreaObj;
+    });
   },
 
   getBushFireRiskArea: function(){

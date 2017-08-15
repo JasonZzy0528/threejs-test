@@ -9,6 +9,8 @@ var veg_clearance_table;
 var veg_clearance_table_name;
 var veg_clearance_table_has_intersect_column;
 var SRID;
+var count = 0;
+var missing = 0;
 
 function cleanCatenaries(catenaries){
   var sortedCatenaries = [];
@@ -127,10 +129,10 @@ function genClearance(projectId, circuitId) {
 
 
           // generate clearance
-
           var viewport3d, clearance;
           try {
             viewport3d = new Viewport3D(config);
+            viewport3d.generateClearance();
             clearance = viewport3d.getClearance();
           } catch (e) {
             console.log('Failed to generate model');
@@ -155,8 +157,10 @@ function genClearance(projectId, circuitId) {
               var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
               var sql = `UPDATE ${veg_clearance_table} SET intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), p = ${clearanceConfig.P}, b = ${clearanceConfig.B}, v = ${clearanceConfig.V}, h = ${clearanceConfig.H}, s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
               console.log(sql);
-              promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
+              count++;
+              promises.push(db.query(sql).catch(function(error){console.error(sql);console.error(error);}));
             }else{
+              missing++;
               return;
             }
             if(closestIntersect != null){
@@ -164,7 +168,7 @@ function genClearance(projectId, circuitId) {
               var distance = closestIntersect.distance;
               var sql = `UPDATE ${veg_clearance_table} SET clearance_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), clearance_closest_distance=${distance} WHERE gid = ${line.id};`;
               console.log(sql);
-              promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
+              promises.push(db.query(sql).catch(function(error){console.error(sql);console.error(error);}));
             }
           });
 
@@ -184,12 +188,16 @@ function genClearance(projectId, circuitId) {
     // update veg_clearance_table
     if(promises.length > 0){
       return Promise.all(promises).then(function(){
-        console.log(' Clearance Done');
+        console.log('Clearance Done');
+        console.log('count', count);
+        console.log('missing', missing);
       }).catch(function(err){
         console.log(err);
       })
     }else{
       console.log('Clearance Done');
+      console.log('count', count);
+      console.log('missing', missing);
       return;
     }
   });
@@ -248,6 +256,7 @@ function getAllData(projectId, circuitId){
         var line_geom = JSON.parse(record.line_geom);
         var line_gid = record.line_gid;
         var line_span_length = record.cat_span_length;
+        var associate_cats = record.associate_cats;
 
         //sub offset only for test
         // _.forEach(cat_geom.coordinates, function(coordinate, index){
@@ -287,7 +296,8 @@ function getAllData(projectId, circuitId){
               id: cat_id,
               geom: cat_geom
             }],
-            lines:[]
+            lines:[],
+            associate_cats: associate_cats
           };
           if(line_gid != undefined || line_gid != null){
             centerline_list[`${polestart}_${poleend}`].lines.push({ id: line_gid, geom: line_geom });
@@ -304,6 +314,28 @@ function getAllData(projectId, circuitId){
 }
 
 function genBushFireRiskArea(projectId, circuitId){
+  function getPointToGround(point, position){
+    return new Promise(function(resolve, reject){
+      var pointText = `POINTZ(${point.x} ${point.y} ${point.z})`;
+      var sql = 'SELECT cb_intersection_point_to_groundmesh(${schema}, ${projectId}, ${circuitId}, ST_GeomFromText(${pointText},cb_project_srid(${projectId})));';
+      var params = {
+        schema: 'public',
+        projectId: parseInt(projectId),
+        circuitId: parseInt(circuitId),
+        pointText: pointText
+      }
+      return db.query(sql, params).then(function(data){
+        var result = {
+          groundPoint: data[0].cb_intersection_point_to_groundmesh,
+          position:position
+        };
+        resolve(result)
+      })
+      .catch(function(error){
+        reject(error);
+      });
+    });
+  }
   return getAllData(projectId, circuitId).then(function(data){
     return checkIntersectionColumn('risk_area_intersection').then(function(hasColumn){
       if(!hasColumn){
@@ -328,12 +360,12 @@ function genBushFireRiskArea(projectId, circuitId){
     _.forEach(Object.keys(data), function(attribute){
       if(data[attribute].lines.length > 0){
         // generate center span
-        var cats = data[attribute].cats;
+        var cats = data[attribute].associate_cats;
         var beginAvg = [0,0,0];
         var endAvg = [0,0,0];
         _.forEach(cats, function(cat){
-          var begin = cat.geom.coordinates[0];
-          var end = cat.geom.coordinates[2];
+          var begin = JSON.parse(cat.geom).coordinates[0];
+          var end = JSON.parse(cat.geom).coordinates[2];
           var x;
           if(begin[0] > end[0]){
             x = end;
@@ -385,7 +417,7 @@ function genBushFireRiskArea(projectId, circuitId){
           }
         });
         cats = cleanCatenaries(_.map(cats, function(cat){
-          return cat.geom.coordinates;
+          return JSON.parse(cat.geom).coordinates;
         }));
 
         var config = {
@@ -396,7 +428,8 @@ function genBushFireRiskArea(projectId, circuitId){
             clientHeight: 0
           },
           clearanceConfig: clearanceConfig,
-          type: 'bushFireRiskArea'
+          type: 'bushFireRiskArea',
+          getPointToGround: getPointToGround
         };
 
         // generate bush fire risk area
@@ -404,49 +437,36 @@ function genBushFireRiskArea(projectId, circuitId){
         var viewport3d, bushFireRiskArea;
         try {
           viewport3d = new Viewport3D(config);
-          bushFireRiskArea = viewport3d.getBushFireRiskArea();
+          bushFireRiskArea = viewport3d.genBushFireArea().then(function(model){
+            var lines = data[attribute].lines;
+            console.log(`Updating ${veg_clearance_table}`);
+            _.forEach(lines, function(line){
+              var intersects = model.getIntersectsWithVeg(line.geom.coordinates, line.id);
+              var closestIntersect = model.getClosestIntersect(line.geom.coordinates, line.id);
+              if(intersects.length === 1){
+                var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
+                var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_p = ${clearanceConfig.P}, risk_area_b = ${clearanceConfig.B}, risk_area_v = ${clearanceConfig.V}, risk_area_h = ${clearanceConfig.H}, risk_area_s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
+                console.log(sql);
+                count++;
+                console.log('count',count);
+                promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
+              }else{
+                missing++;
+                return;
+              }
+              if(closestIntersect.intersect){
+                var point = `POINTZ(${closestIntersect.intersect.x} ${closestIntersect.intersect.y} ${closestIntersect.intersect.z})`;
+                var distance = closestIntersect.distance;
+                var sql = `UPDATE ${veg_clearance_table} SET risk_area_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_closest_distance=${distance} WHERE gid = ${line.id};`;
+                console.log(sql);
+                promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
+              }
+            });
+          });
         } catch (e) {
           console.log('Failed to generate model');
           return;
         }
-
-        // var viewport3d = new Viewport3D(config);
-        // var bushFireRiskArea = viewport3d.getBushFireRiskArea();
-
-
-        var lines = data[attribute].lines;
-        console.log(`Updating ${veg_clearance_table}`);
-        _.forEach(lines, function(line){
-          var intersects = bushFireRiskArea.getIntersectsWithVeg(line.geom.coordinates, line.id);
-          var closestIntersect = bushFireRiskArea.getClosestIntersect(line.geom.coordinates, line.id);
-          if(intersects.length === 1){
-            var point = `POINTZ(${intersects[0].x} ${intersects[0].y} ${intersects[0].z})`;
-            var sql = `UPDATE ${veg_clearance_table} SET risk_area_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_p = ${clearanceConfig.P}, risk_area_b = ${clearanceConfig.B}, risk_area_v = ${clearanceConfig.V}, risk_area_h = ${clearanceConfig.H}, risk_area_s = ${clearanceConfig.S} WHERE gid = ${line.id};`;
-            console.log(sql);
-            promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
-          }else{
-            return;
-          }
-          if(closestIntersect.intersect){
-            var point = `POINTZ(${closestIntersect.intersect.x} ${closestIntersect.intersect.y} ${closestIntersect.intersect.z})`;
-            var distance = closestIntersect.distance;
-            var sql = `UPDATE ${veg_clearance_table} SET risk_area_closest_intersection = ST_GeomFromText('${point}', cb_project_srid(${projectId})), risk_area_closest_distance=${distance} WHERE gid = ${line.id};`;
-            console.log(sql);
-            promises.push(db.query(sql).catch(function(error) {console.error(sql);console.error(error);}));
-          }
-        });
-
-        // output OBJ
-        // var scene = viewport3d.scene.model;
-        // var exporter = new THREE.OBJExporter();
-        // var results = exporter.parse(scene);
-        // var fs = require('fs');
-        // fs.writeFile("./tmp.OBJ", results, function(err) {
-        //   if(err) {
-        //     return console.log(err);
-        //   }
-        //   console.log("The file was saved!");
-        // });
       }
     });
 
@@ -454,11 +474,15 @@ function genBushFireRiskArea(projectId, circuitId){
     if(promises.length > 0){
       Promise.all(promises).then(function(){
         console.log('Done');
+        console.log('count',count);
+        console.log('missing',missing);
       }).catch(function(err){
         console.log(err);
       })
     }else{
       console.log('Done');
+      console.log('count', count);
+      console.log('missing', missing);
     }
   });
 }

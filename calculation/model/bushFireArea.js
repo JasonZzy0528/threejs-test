@@ -16,10 +16,10 @@ var BushFireArea = Class([Clearance], {
     var beginVerticeOnCenterCatenary = me.centerSpan.getBegin();
     var endVerticeOnCenterCatenary = me.centerSpan.getEnd();
     var left, right, bottom, rightBottom, leftBottom;
+    var promises = [];
 
     var catenaryObjArray = me.catenaryObjArray;
 
-    var riskAreaGeometry = new THREE.Geometry();
     var allVertices = [];
     for(var i = 0; i < 21; i++){
       var vertices = [];
@@ -27,41 +27,52 @@ var BushFireArea = Class([Clearance], {
         vertices.push(catenary.getVertices()[i]);
       });
       var position = me.detectPosition(vertices, beginVerticeOnCenterCatenary, endVerticeOnCenterCatenary, unitDir);
-      var spanVertices = me.getSpanVertices(i, position);
-      allVertices = allVertices.concat(spanVertices);
-      riskAreaGeometry.vertices = riskAreaGeometry.vertices.concat(spanVertices);
-      if(i == 0){
-        riskAreaGeometry.faces.push(new THREE.Face3(3,2,0));
-        riskAreaGeometry.faces.push(new THREE.Face3(2,1,0));
-      }else{
-        if(i == 20){
-          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 4, riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 1));
-          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 2, riskAreaGeometry.vertices.length - 1));
-        }
-        // connect to end
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 4, riskAreaGeometry.vertices.length - 8, riskAreaGeometry.vertices.length - 3));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 8, riskAreaGeometry.vertices.length - 7));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 7, riskAreaGeometry.vertices.length - 2));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 2, riskAreaGeometry.vertices.length - 7, riskAreaGeometry.vertices.length - 6));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 2, riskAreaGeometry.vertices.length - 6, riskAreaGeometry.vertices.length - 1));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 1, riskAreaGeometry.vertices.length - 6, riskAreaGeometry.vertices.length - 5));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 1, riskAreaGeometry.vertices.length - 5, riskAreaGeometry.vertices.length - 4));
-        riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 4, riskAreaGeometry.vertices.length - 5, riskAreaGeometry.vertices.length - 8));
-      }
-
+      var centerPoint = new THREE.Vector3((position.left.vertice.x + position.right.vertice.x)/2, (position.left.vertice.y + position.right.vertice.y)/2, 0);
+      promises.push(me.viewport3d.getPointToGround(centerPoint, position));
     }
 
-    riskAreaGeometry.computeFaceNormals();
-    riskAreaGeometry.computeVertexNormals();
-    me.allVertices = allVertices;
+    return Promise.all(promises).then(function(data){
+      var riskAreaGeometry = new THREE.Geometry();
+      _.forEach(data,function(slice, index){
+        var groundZ = slice.groundPoint?slice.groundPoint.coordinates[2]:null;
+        var position = slice.position;
+        var spanVertices = me.getSpanVertices(i, position, groundZ);
+        // console.log(spanVertices);
+        allVertices = allVertices.concat(spanVertices);
+        riskAreaGeometry.vertices = riskAreaGeometry.vertices.concat(spanVertices);
+        if(index == 0){
+          riskAreaGeometry.faces.push(new THREE.Face3(3,2,0));
+          riskAreaGeometry.faces.push(new THREE.Face3(2,1,0));
+        }else{
+          if(index == 20){
+            riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 4, riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 1));
+            riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 2, riskAreaGeometry.vertices.length - 1));
+          }
+          if(riskAreaGeometry.vertices.length - 8 < 0){console.log('error')};
+          // connect to end
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 4, riskAreaGeometry.vertices.length - 8, riskAreaGeometry.vertices.length - 3));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 8, riskAreaGeometry.vertices.length - 7));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 3, riskAreaGeometry.vertices.length - 7, riskAreaGeometry.vertices.length - 2));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 2, riskAreaGeometry.vertices.length - 7, riskAreaGeometry.vertices.length - 6));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 2, riskAreaGeometry.vertices.length - 6, riskAreaGeometry.vertices.length - 1));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 1, riskAreaGeometry.vertices.length - 6, riskAreaGeometry.vertices.length - 5));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 1, riskAreaGeometry.vertices.length - 5, riskAreaGeometry.vertices.length - 4));
+          riskAreaGeometry.faces.push(new THREE.Face3(riskAreaGeometry.vertices.length - 4, riskAreaGeometry.vertices.length - 5, riskAreaGeometry.vertices.length - 8));
+        }
+      });
 
-    var riskArea = new THREE.Mesh(riskAreaGeometry, me.material);
-    riskArea.name = 'bushFireRistArea';
-    me.object = riskArea;
-    return this;
+      riskAreaGeometry.computeFaceNormals();
+      riskAreaGeometry.computeVertexNormals();
+
+      me.allVertices = allVertices;
+      var riskArea = new THREE.Mesh(riskAreaGeometry, me.material);
+      riskArea.name = 'bushFireRistArea';
+      me.object = riskArea;
+      return me;
+    })
   },
 
-  getSpanVertices: function(index, vertices){
+  getSpanVertices: function(index, vertices, groundZ){
     var me = this;
     var towerHeight = me.start_towerHeight + index*me.towerHeight_gap;
     var start_groundZ = me.start_groundZ;
@@ -71,15 +82,41 @@ var BushFireArea = Class([Clearance], {
     var unitDir = me.unitDir;
     var topLeft, topRight, bottomRight, bottomLeft;
     if(index < 5 || index > 15){
-      topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight)*unitDir.x, vertices.left.vertice.y + (5 + towerHeight)*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
-      topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight)*unitDir.x, vertices.right.vertice.y - (5 + towerHeight)*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
-      bottomRight = new THREE.Vector3(vertices.right.vertice.x, vertices.right.vertice.y, start_groundZ + groundZ_gap*index);
-      bottomLeft = new THREE.Vector3(vertices.left.vertice.x, vertices.left.vertice.y, start_groundZ + groundZ_gap*index);
+      if(groundZ != null){
+        if(groundZ < start_groundZ + groundZ_gap*index){
+          topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.x, vertices.left.vertice.y + (5 + towerHeight + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+          topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.x, vertices.right.vertice.y - (5 + towerHeight + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.y,5 + towerHeight + start_groundZ + groundZ_gap*index);
+        }else{
+          topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight)*unitDir.x, vertices.left.vertice.y + (5 + towerHeight)*unitDir.y, groundZ + 5 + towerHeight);
+          topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight)*unitDir.x, vertices.right.vertice.y - (5 + towerHeight)*unitDir.y, groundZ + 5 + towerHeight);
+        }
+        bottomRight = new THREE.Vector3(vertices.right.vertice.x, vertices.right.vertice.y, groundZ);
+        bottomLeft = new THREE.Vector3(vertices.left.vertice.x, vertices.left.vertice.y, groundZ);
+      }else{
+        topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight)*unitDir.x, vertices.left.vertice.y + (5 + towerHeight)*unitDir.y, 5 + towerHeight + groundZ);
+        topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight)*unitDir.x, vertices.right.vertice.y - (5 + towerHeight)*unitDir.y, 5 + towerHeight + groundZ);
+        bottomRight = new THREE.Vector3(vertices.right.vertice.x, vertices.right.vertice.y, groundZ);
+        bottomLeft = new THREE.Vector3(vertices.left.vertice.x, vertices.left.vertice.y, groundZ);
+      }
     }else{
-      topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight + S)*unitDir.x, vertices.left.vertice.y + (5 + towerHeight + S)*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
-      topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight + S)*unitDir.x, vertices.right.vertice.y - (5 + towerHeight + S)*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
-      bottomRight = new THREE.Vector3(vertices.right.vertice.x - S*unitDir.x, vertices.right.vertice.y - S*unitDir.y, start_groundZ + groundZ_gap*index);
-      bottomLeft = new THREE.Vector3(vertices.left.vertice.x + S*unitDir.x, vertices.left.vertice.y + S*unitDir.y, start_groundZ + groundZ_gap*index);
+      if(groundZ != null){
+        if(groundZ<start_groundZ + groundZ_gap*index){
+          topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight + S + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.x, vertices.left.vertice.y + (5 + towerHeight + S + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+          topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight + S + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.x, vertices.right.vertice.y - (5 + towerHeight + S + (start_groundZ + groundZ_gap*index - groundZ))*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+        }else{
+          topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight + S)*unitDir.x, vertices.left.vertice.y + (5 + towerHeight + S)*unitDir.y, groundZ + 5 + towerHeight);
+          topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight + S)*unitDir.x, vertices.right.vertice.y - (5 + towerHeight + S)*unitDir.y, groundZ + 5 + towerHeight);
+        }
+
+        bottomRight = new THREE.Vector3(vertices.right.vertice.x - S*unitDir.x, vertices.right.vertice.y - S*unitDir.y, groundZ);
+
+        bottomLeft = new THREE.Vector3(vertices.left.vertice.x + S*unitDir.x, vertices.left.vertice.y + S*unitDir.y, groundZ);
+      }else{
+        topLeft = new THREE.Vector3(vertices.left.vertice.x + (5 + towerHeight + S)*unitDir.x, vertices.left.vertice.y + (5 + towerHeight + S)*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+        topRight = new THREE.Vector3(vertices.right.vertice.x - (5 + towerHeight + S)*unitDir.x, vertices.right.vertice.y - (5 + towerHeight + S)*unitDir.y, 5 + towerHeight + start_groundZ + groundZ_gap*index);
+        bottomRight = new THREE.Vector3(vertices.right.vertice.x - S*unitDir.x, vertices.right.vertice.y - S*unitDir.y, start_groundZ + groundZ_gap*index);
+        bottomLeft = new THREE.Vector3(vertices.left.vertice.x + S*unitDir.x, vertices.left.vertice.y + S*unitDir.y, start_groundZ + groundZ_gap*index);
+      }
     }
     return [topLeft, topRight, bottomRight, bottomLeft];
   },
